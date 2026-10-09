@@ -1,0 +1,69 @@
+# Variables de entorno y credenciales (nunca versionar)
+.env
+.env.*
+!.env.docker.example
+!.env.example
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+credentials*.json
+service-account*.json
+
+# Dependencias
+node_modules/
+.pnpm-store/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Builds y cobertura
+dist/
+build/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.cache/
+.vite/
+.eslintcache
+playwright-report/
+test-results/
+
+# Logs y temporales
+*.log
+npm-debug.log*
+pnpm-debug.log*
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.orig
+*~
+*.swp
+
+# Datos locales (volcados de MongoDB, archivos subidos de prueba)
+dump/
+*.archive
+uploads/
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Claude Code: configuración personal local
+.claude/settings.local.json
+CLAUDE.local.md

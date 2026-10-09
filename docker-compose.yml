@@ -1,0 +1,70 @@
+name: omr-preicfes
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok ? quit(0) : quit(1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    networks: [omr]
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks: [omr]
+  api:
+    profiles: ["app"]
+    build:
+      context: ./apps/api
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD_URLENCODED:?definir MONGO_ROOT_PASSWORD_URLENCODED en .env}@mongo:27017/${MONGO_DB}?authSource=admin
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports: ["127.0.0.1:3000:3000"]
+    networks: [omr]
+  omr:
+    profiles: ["app"]
+    build:
+      context: ./apps/omr
+    env_file: .env
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports: ["127.0.0.1:8000:8000"]
+    networks: [omr]
+  web:
+    profiles: ["app"]
+    build:
+      context: ./apps/web
+    depends_on:
+      api:
+        condition: service_started
+    ports: ["127.0.0.1:5173:5173"]
+    networks: [omr]
+networks:
+  omr: {}
+volumes:
+  mongo_data: {}
+  redis_data: {}
