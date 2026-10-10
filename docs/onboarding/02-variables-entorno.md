@@ -13,6 +13,8 @@ Plantilla versionada: `.env.docker.example` (solo marcadores). Archivo real: `.e
 | `MONGODB_URI` | Sí | NestJS en el host | URI completa con `localhost`; la contraseña va codificada para URL. |
 | `REDIS_URL` | No | NestJS en el host | URI de Redis con `localhost`. |
 
+Redis local no tiene contraseña: solo escucha en `127.0.0.1`. Si se necesita en entornos compartidos se decide en DT-06.
+
 Dentro de Docker, `docker-compose.yml` sobrescribe `MONGODB_URI` y `REDIS_URL` del servicio `api` con los hostnames `mongo` y `redis`.
 
 ## Contraseña codificada para URL

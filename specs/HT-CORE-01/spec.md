@@ -1,7 +1,7 @@
 ---
 id: HT-CORE-01
 title: Base técnica, configuración y servicios locales
-status: ready            # draft | ready | in-progress | in-review | done
+status: in-progress      # draft | ready | in-progress | in-review | done
 owner: Diego Alejandro Narvaez Meza
 branch: feature/HT-CORE-01
 updated: 2026-10-10
