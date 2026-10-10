@@ -4,6 +4,7 @@ IDs y temas tomados del roadmap original. Módulo derivado del prefijo del ID. L
 
 | ID | Módulo | Tema | Estado | Spec |
 |---|---|---|---|---|
+| HT-CORE-01 | Transversal | Base técnica, configuración y servicios locales | ready (spec) | [spec](HT-CORE-01/spec.md) |
 | HU-EVAL-001 | Evaluación | Asociación automática de respuestas | draft (pendiente de revisión) | [spec](HU-EVAL-001/spec.md) |
 | HU-EVAL-002 | Evaluación | Claves de respuesta versionadas | pending spec | — |
 | HU-EVAL-003 | Evaluación | Comparación automática con claves | pending spec | — |

@@ -20,6 +20,16 @@ Decisiones que afectan a varias historias. **Ninguna está implementada**; cada 
 - **Situación:** Compose define `api`, `omr`, `web` (perfil `app`) con contexto `./apps/*`, que no existe. Hay plantillas en `docker/templates/`.
 - **A decidir:** monorepo con pnpm workspaces o carpetas independientes; gestor de paquetes (las plantillas usan pnpm); versión de Node (22) y Python (3.12); estructura de módulos NestJS; ¿paquete compartido de tipos/contratos?
 - **Entregable:** spec técnica (ej. `specs/TEC-001`) con esqueletos vacíos, lint, typecheck y healthchecks. Sin código de negocio.
+- **Estructura verificada (HT-CORE-01, 2026-10-10):** `apps/api`, `apps/web` y `apps/omr` **no existen**; no se creó scaffolding. Solo existen las plantillas `docker/templates/{api,web,omr}.Dockerfile.example` (Node 22 + pnpm, Python 3.12).
+- **Convenciones de frontend pendientes** (registradas por HT-CORE-01, a decidir por el equipo):
+
+  | Convención | Pregunta abierta | DT |
+  |---|---|---|
+  | Lint | Herramienta y reglas para React + TypeScript strict | DT-01 / DT-08 |
+  | Formato | Formateador y si se valida en CI | DT-01 / DT-08 |
+  | Pruebas | Framework de componentes y E2E | DT-05 |
+  | Variables públicas y privadas | Qué variables llegan al navegador, convención de nombres y dónde se documentan | DT-01 |
+  | Diseño de interfaz | Tokens, accesibilidad y movimiento | HU-UX-001 |
 
 ## DT-02 — Replica set de MongoDB
 - **Situación:** `mongo` corre standalone. **Las transacciones multi-documento, el outbox transaccional y los change streams requieren replica set.**
