@@ -11,8 +11,22 @@
 
 Las versiones de Node y Python provienen de `docker/templates/*.Dockerfile.example`; confirmar al crear las apps.
 
+## Instalar Claude Code
+Requiere una cuenta de Claude (Pro, Max, Team o Enterprise) o una clave de API de Anthropic.
+
+```powershell
+# Opción 1: instalador nativo (Windows PowerShell)
+irm https://claude.ai/install.ps1 | iex
+
+# Opción 2: con Node.js 18 o superior
+npm install -g @anthropic-ai/claude-code
+
+claude --version
+```
+Abrir Claude Code **siempre desde la raíz del repositorio** (`claude`), para que cargue `CLAUDE.md`, `.claude/settings.json` y las skills de `.claude/skills/`. La primera vez pide iniciar sesión. Comprobación de skills: [05-skills-claude-code.md](05-skills-claude-code.md#comprobar-que-están-disponibles).
+
 ## Pasos
-1. Clonar el repositorio y crear tu rama (ver [04-git-ramas-commits-pr.md](04-git-ramas-commits-pr.md)).
+1. Clonar el repositorio, cambiar a `develop` y crear tu rama (ver [00-primeros-pasos.md](00-primeros-pasos.md) y [04-git-ramas-commits-pr.md](04-git-ramas-commits-pr.md)).
 2. Crear el archivo de variables local:
    ```powershell
    Copy-Item .env.docker.example .env

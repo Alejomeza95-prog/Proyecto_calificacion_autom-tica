@@ -2,7 +2,7 @@
 id: HU-XXXX-000
 spec: ./spec.md
 plan: ./plan.md
-status: pending          # pending | in-progress | done
+status: draft            # draft | ready | in-progress | in-review | done
 updated: YYYY-MM-DD
 ---
 
@@ -11,10 +11,13 @@ updated: YYYY-MM-DD
 Rama: `feature/<ID>` (desde `develop`).
 
 Reglas:
-- Generado con `/sdd-tasks` a partir de `spec.md` y `plan.md` en estado `ready`.
+- Generado por `/sdd-spec` (en `draft`) junto con `spec.md` y `plan.md`; `/sdd-tasks` lo actualiza cuando cambian. Pasa a `ready` solo cuando spec y plan están en `ready` y la trazabilidad se valida (`scripts/sdd-validate.ps1 -Id <ID>`).
+- No se implementa con este archivo en `draft`.
 - Cada tarea `T-NN` referencia al menos un criterio (`CA-NN`), regla (`RN-NN`) o requisito no funcional (`RNF-NN`) y la sección del plan que implementa.
 - Una tarea solo se marca `[x]` cuando su verificación pasa; registrar evidencia (comando y resultado, archivos, endpoint) y el commit.
 - Si durante la implementación el plan resulta incorrecto, actualizar primero `plan.md` y luego estas tareas.
+- Al actualizar: nunca borrar ni desmarcar tareas `[x]` ni su evidencia; no renumerar; las tareas obsoletas se tachan `~~T-NN~~ (obsoleta: motivo)`.
+- Columna **Cubre**: `CA-NN`, `RN-NN`, `RNF-NN` o `Soporte` (con justificación en la tarea).
 
 ## Fase 1 — Datos (MongoDB / Mongoose)
 | ID | Tarea | Cubre | Plan § | Verificación | Estado | Evidencia |
@@ -52,3 +55,8 @@ Reglas:
 | Criterio / regla | Tareas | Pruebas | Cubierto |
 |---|---|---|---|
 | CA-01 | T-.. | ... | [ ] |
+
+## Registro de cambios
+| Fecha | Cambio | Motivo |
+|---|---|---|
+| YYYY-MM-DD | Creación con `/sdd-spec` | — |

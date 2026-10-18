@@ -10,7 +10,13 @@
       "Bash(docker compose ps:*)",
       "Bash(docker compose logs:*)",
       "Bash(docker --version)",
-      "Bash(docker compose version)"
+      "Bash(docker compose version)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git show:*)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sdd-validate.ps1:*)",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sdd-validate.ps1:*)"
     ],
     "ask": [
       "Bash(git commit:*)",
@@ -23,7 +29,14 @@
       "Bash(docker compose stop:*)",
       "Bash(docker compose restart:*)",
       "Bash(docker compose exec:*)",
-      "Bash(docker compose build:*)"
+      "Bash(docker compose build:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git branch -d:*)",
+      "Bash(git branch --delete:*)",
+      "Bash(git restore:*)",
+      "Bash(git stash:*)",
+      "Bash(git tag:*)"
     ],
     "deny": [
       "Read(./.env)",
@@ -51,7 +64,14 @@
       "Bash(docker system prune:*)",
       "Bash(docker rm:*)",
       "Bash(*docker-reset.ps1*)",
-      "Bash(rm -rf:*)"
+      "Bash(rm -rf:*)",
+      "Bash(git branch --delete --force:*)",
+      "Bash(git branch -df:*)",
+      "Bash(git checkout -- :*)",
+      "Bash(git checkout .:*)",
+      "Bash(git restore .:*)",
+      "Bash(git reset --merge:*)",
+      "Bash(git filter-branch:*)"
     ]
   }
 }

@@ -1,12 +1,13 @@
 ---
 name: sdd-release
 description: Verifica que una historia de usuario terminada en su rama feature/HU-XXXX cumple la Definition of Done y prepara el Pull Request único hacia develop. Usar al finalizar una HU, antes de abrir el PR o al corregir observaciones de revisión.
+argument-hint: <ID>
 ---
 
 # SDD Release
 
 ## Lugar en el flujo
-`/sdd-spec` → `/sdd-plan` → `/sdd-tasks` → `/sdd-implement` → pruebas → **`/sdd-release`** → PR único hacia `develop` → revisión → merge.
+`/sdd-spec` (spec + plan + tasks) → revisión (`ready`) → `/sdd-implement` → pruebas → **`/sdd-release`** → PR único hacia `develop` → revisión → merge.
 
 ## Precondiciones
 1. Rama actual `feature/<ID>`, actualizada con `develop` (sugerir `git fetch` y `git merge origin/develop` o rebase, según acuerdo del equipo; no ejecutarlo sin pedido).
@@ -15,7 +16,7 @@ description: Verifica que una historia de usuario terminada en su rama feature/H
 ## Checklist de Definition of Done
 ### Documentación SDD
 1. `spec.md` y `plan.md` reflejan lo implementado (si cambió algo durante la implementación, está actualizado).
-2. Matriz de cobertura de `tasks.md` completa: cada CA tiene tarea y prueba.
+2. Matriz de cobertura de `tasks.md` completa: cada CA tiene tarea y prueba. `scripts/sdd-validate.ps1 -Id <ID>` sin `[FALLA]`.
 
 ### Coherencia con el plan
 3. Colecciones, esquemas, índices, endpoints y contratos implementados coinciden con `plan.md`.

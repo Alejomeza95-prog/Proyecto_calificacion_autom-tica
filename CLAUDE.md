@@ -1,22 +1,25 @@
 # Proyecto OMR PreICFES — reglas obligatorias para Claude Code
 
 ## Forma de trabajo: Spec-Driven Development (SDD)
-Cada historia de usuario tiene tres archivos en `specs/<ID>/`: `spec.md` (qué), `plan.md` (cómo) y `tasks.md` (pasos).
+Cada historia de usuario tiene tres archivos en `specs/<ID>/`: `spec.md` (qué), `plan.md` (cómo) y `tasks.md` (pasos). **`/sdd-spec` genera los tres en una sola ejecución**, en estado `draft`.
 
 Flujo por historia, todo en la rama `feature/<ID>` creada desde `develop`:
 ```
-/sdd-spec ─► /sdd-plan ─► /sdd-tasks ─► /sdd-implement + pruebas ─► commits ─► /sdd-release ─► PR único hacia develop ─► revisión ─► merge
+/sdd-spec ─► revisión del desarrollador ─► spec y plan en ready ─► /sdd-implement + pruebas ─► commits ─► /sdd-release ─► PR único hacia develop ─► revisión ─► merge
+(spec+plan+tasks en draft)   └─ si cambian requisitos: /sdd-plan y /sdd-tasks actualizan sin borrar lo aprobado
 ```
 Detalle: `docs/onboarding/03-flujo-sdd.md`.
 
 1. Leer `specs/000-architecture/architecture.md` antes de realizar cualquier cambio relevante.
-2. No hay aprobaciones ni PR separados para spec o plan: el desarrollador responsable confirma que cada documento está `ready` antes de pasar al siguiente, y el equipo revisa todo junto en el PR.
-3. No implementar sin `spec.md` y `plan.md` en `ready` y `tasks.md` generado.
-4. Cada tarea `T-NN` cubre criterios `CA-NN` verificables y una sección del plan.
-5. Si el plan no encaja durante la implementación, actualizar `plan.md` antes de continuar.
-6. No modificar archivos, datos ni arquitectura de la aplicación existente sin antes inspeccionarlos.
-7. No inventar historias, criterios de aceptación ni estimaciones: deben estar respaldados por documentos en `docs/requisitos/` o por una decisión registrada.
-8. Plantillas: `specs/_templates/spec-template.md`, `plan-template.md`, `tasks-template.md`.
+2. `/sdd-spec <ID>` crea `spec.md`, `plan.md` y `tasks.md` desde las plantillas, todos en `draft`, y valida la trazabilidad CA/RN → plan → tareas (`scripts/sdd-validate.ps1 -Id <ID>`). Si falta información esencial (ID, objetivo, requisitos, al menos un criterio de aceptación), la pide y no crea archivos.
+3. Solo el desarrollador responsable cambia un documento a `ready`, tras revisar su checklist. Claude nunca marca `ready` por iniciativa propia. No hay PR separados para spec o plan: el equipo revisa todo junto en el PR.
+4. `/sdd-plan` y `/sdd-tasks` actualizan o regeneran su documento cuando cambian los requisitos, conservando decisiones, IDs y tareas completadas; un documento `ready` que cambia vuelve a `draft`.
+5. No implementar sin `spec.md` y `plan.md` en `ready`, `tasks.md` en `ready` y confirmación explícita del desarrollador. `/sdd-spec` nunca inicia la implementación; `/sdd-implement` solo la invoca el desarrollador.
+6. Cada tarea `T-NN` cubre criterios `CA-NN` verificables y una sección del plan.
+7. Si el plan no encaja durante la implementación, actualizar `plan.md` antes de continuar.
+8. No modificar archivos, datos ni arquitectura de la aplicación existente sin antes inspeccionarlos.
+9. No inventar historias, criterios de aceptación ni estimaciones: deben estar respaldados por documentos en `docs/requisitos/`, por requisitos aportados por el desarrollador y registrados en la spec (§14), o por una decisión registrada.
+10. Plantillas: `specs/_templates/spec-template.md`, `plan-template.md`, `tasks-template.md`.
 
 ## Fuente de verdad
 Precedencia: spec y plan de la historia (`ready` o posterior) > arquitectura canónica > requisitos en `docs/requisitos/` > documentos históricos. Ver `docs/SOURCE_OF_TRUTH.md`. Ante divergencias, preguntar antes de implementar.

@@ -28,8 +28,10 @@ El usuario root se autentica en `admin`. La base de datos se crea cuando se inse
 - No ejecutar el perfil `app` hasta que existan `apps/api`, `apps/web`, `apps/omr` y sus Dockerfiles.
 
 ## 5. Trabajar con Specs
-Flujo obligatorio: [`docs/onboarding/03-flujo-sdd.md`](docs/onboarding/03-flujo-sdd.md).
-Las skills del proyecto están en `.claude/skills/`. Las skills globales del usuario (`~/.agents/skills`) son opcionales y no forman parte del proyecto.
+- Ruta completa del desarrollador: [`docs/onboarding/00-primeros-pasos.md`](docs/onboarding/00-primeros-pasos.md).
+- Flujo obligatorio: [`docs/onboarding/03-flujo-sdd.md`](docs/onboarding/03-flujo-sdd.md). `/sdd-spec <ID> <requisitos>` genera `spec.md`, `plan.md` y `tasks.md` en `draft`; se implementa solo con spec y plan en `ready`.
+- Skills del proyecto: `.claude/skills/` (se cargan al abrir `claude` en la raíz del repo; [guía](docs/onboarding/05-skills-claude-code.md)). Las skills globales del usuario (`~/.agents/skills`) son opcionales y no forman parte del proyecto.
+- Validar trazabilidad: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sdd-validate.ps1 -Id <ID>`.
 
 ## 6. Apagar, sin borrar datos
 `docker compose down`
