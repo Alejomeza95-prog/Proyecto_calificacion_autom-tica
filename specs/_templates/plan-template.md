@@ -1,7 +1,7 @@
 ---
 id: HU-XXXX-000
 spec: ./spec.md
-status: draft            # draft | ready
+status: draft            # draft | ready  (solo el desarrollador marca ready)
 owner: <desarrollador responsable>
 updated: YYYY-MM-DD
 ---
@@ -10,6 +10,7 @@ updated: YYYY-MM-DD
 
 > **plan.md describe CÓMO se construye lo definido en `spec.md`.** Debe respetar `specs/000-architecture/architecture.md` y las skills `project-architecture` y `mongodb-mongoose`.
 > Persistencia exclusiva: MongoDB + Mongoose. No PostgreSQL, Prisma ni MySQL.
+> Generado por `/sdd-spec` como propuesta (`draft`); `/sdd-plan` lo actualiza cuando cambia la spec, sin borrar decisiones ni contenido aprobado (ver §17).
 
 ## 1. Resumen técnico
 Qué se construye, en qué componentes y cuál es el enfoque general (3–6 líneas).
@@ -130,3 +131,12 @@ Errores en formato `application/problem+json`.
 - [ ] Decisión de transacciones coherente con replica set (DT-02).
 - [ ] Endpoints y contratos completos.
 - [ ] Sin tecnologías fuera de la arquitectura aprobada.
+- [ ] Ningún ID (`RN`/`CA`/`RNF`) citado aquí falta en la spec; `scripts/sdd-validate.ps1 -Id <ID>` sin `[FALLA]`.
+- [ ] `spec.md` en `ready`.
+
+## 17. Registro de cambios
+No borrar decisiones ni contenido aprobado: las decisiones superadas se marcan «reemplazada por DEC-NN»; lo obsoleto se tacha con su motivo.
+
+| Fecha | Cambio | Motivo (CA/RN/spec §14) | Estado previo → nuevo |
+|---|---|---|---|
+| YYYY-MM-DD | Creación con `/sdd-spec` | — | — → draft |

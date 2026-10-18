@@ -15,16 +15,16 @@ Sistema para calificar evaluaciones tipo PreICFES: lectura OMR de hojas de respu
 
 ## 3. Cómo trabajamos: SDD (10 min)
 **`feature/<ID>` desde `develop` → spec.md → plan.md → tasks.md → implementación + pruebas → commits → PR único hacia `develop` → revisión → merge**
-- Tres documentos por historia: `spec.md` (qué), `plan.md` (cómo: MongoDB, índices, endpoints, contratos, pruebas) y `tasks.md` (pasos).
-- Sin aprobaciones separadas: el desarrollador marca cada documento `ready`; el equipo revisa todo en el PR.
-- No se programa sin spec y plan listos y tareas generadas.
+- Tres documentos por historia: `spec.md` (qué), `plan.md` (cómo: MongoDB, índices, endpoints, contratos, pruebas) y `tasks.md` (pasos). **`/sdd-spec` genera los tres juntos en `draft`.**
+- Sin aprobaciones separadas: el desarrollador revisa y confirma cada documento `ready`; el equipo revisa todo en el PR.
+- No se programa sin spec y plan en `ready`; `/sdd-implement` solo lo lanza el desarrollador.
 - Cada tarea `T-NN` cubre criterios `CA-NN` verificables; matriz de cobertura obligatoria.
 - No se inventan historias, criterios ni estimaciones: salen de `docs/requisitos/` o de decisiones registradas.
 - Detalle: [`docs/onboarding/03-flujo-sdd.md`](onboarding/03-flujo-sdd.md).
 
 ## 4. Claude Code y Skills (5 min)
 - `CLAUDE.md` contiene las reglas que Claude Code siempre sigue.
-- `/sdd-spec`, `/sdd-plan`, `/sdd-tasks`, `/sdd-implement`, `/sdd-release` + skills de MongoDB, pruebas, Docker, TypeScript y OMR.
+- `/sdd-spec` (genera spec + plan + tasks), `/sdd-plan` y `/sdd-tasks` (actualizan), `/sdd-implement`, `/sdd-release` + skills de MongoDB, pruebas, Docker, TypeScript y OMR. Vienen en el repositorio (`.claude/skills/`).
 - `.claude/settings.json` bloquea lectura de `.env`, `git push` y comandos destructivos.
 - Detalle: [`docs/onboarding/05-skills-claude-code.md`](onboarding/05-skills-claude-code.md).
 
@@ -37,7 +37,7 @@ Sistema para calificar evaluaciones tipo PreICFES: lectura OMR de hojas de respu
 - Propuesta de arranque:
   1. Incorporar documentos fuente en `docs/requisitos/`.
   2. Resolver DT-01 (apps), DT-04 (auth), DT-05 (pruebas), DT-07 (migraciones) y DT-08 (CI).
-  3. Cada responsable crea su rama `feature/<ID>` y elabora spec, plan y tareas; HU-EVAL-001 debe completarse con `plan.md`.
+  3. Cada responsable crea su rama `feature/<ID>` y ejecuta `/sdd-spec` para generar spec, plan y tareas; HU-EVAL-001 debe completarse con `plan.md`.
 
 ## 7. Decisiones para la reunión
 Ver [`docs/dependencias-transversales.md`](dependencias-transversales.md): replica set, GridFS, autenticación, pruebas, BullMQ, migraciones, CI, entidades base, y quién inicializa el repositorio Git, crea `develop` y protege `main` y `develop`.

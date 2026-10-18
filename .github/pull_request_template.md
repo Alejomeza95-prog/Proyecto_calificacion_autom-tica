@@ -30,7 +30,7 @@
 
 ## Checklist (`/sdd-release`)
 - [ ] `spec.md`, `plan.md` y `tasks.md` reflejan lo implementado
-- [ ] Matriz de cobertura completa: cada CA tiene tarea y prueba
+- [ ] Matriz de cobertura completa: cada CA tiene tarea y prueba; `scripts/sdd-validate.ps1 -Id <ID>` sin fallas
 - [ ] Implementación coherente con el plan (colecciones, índices, endpoints, contratos)
 - [ ] Scripts de migración idempotentes y reversibles
 - [ ] Sin transacciones sin replica set; GridFS solo si está aprobado

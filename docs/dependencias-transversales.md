@@ -47,7 +47,7 @@ Decisiones que afectan a varias historias. **Ninguna está implementada**; cada 
 
 ## DT-08 — CI y protección de `main` y `develop`
 - **A decidir:** plataforma (GitHub Actions), checks requeridos en los PR hacia `develop` y `main` (lint, typecheck, unit, integración MongoDB, `docker compose config`), protección de `main` y `develop`, escaneo de secretos.
-- **Nota:** el directorio aún no es un repositorio Git; la inicialización, la creación de `develop` desde `main` y el primer push los hace el responsable cuando el equipo lo acuerde.
+- **Estado del repositorio:** ya existe en GitHub con `main` y `develop`. Falta configurar la protección de ambas ramas y los checks de CI.
 
 ## DT-09 — Entidades base
 - **Situación:** HU-EVAL-001 depende de estudiantes inscritos, exámenes, formas y usuarios, pero no hay IDs ni specs para ellos.

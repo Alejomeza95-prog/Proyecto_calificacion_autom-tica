@@ -10,14 +10,15 @@ updated: YYYY-MM-DD
 # <ID> — <Título>
 
 > **spec.md describe QUÉ se construye y POR QUÉ.** El CÓMO (colecciones, índices, endpoints, contratos, pruebas) va en `plan.md`.
-> Fuente obligatoria: documentos en `docs/requisitos/`. No inventar requisitos ni criterios.
+> Fuente obligatoria: documentos en `docs/requisitos/` o requisitos aportados por el desarrollador y registrados en §14. No inventar requisitos ni criterios.
+> Generado por `/sdd-spec` junto con `plan.md` y `tasks.md`, en estado `draft`. Solo el desarrollador responsable cambia el estado a `ready`, tras revisar el checklist §13.
 
 ## 1. Objetivo
 Como <rol>, quiero <capacidad>, para <valor>.
 
 ## 2. Contexto y fuentes
 - Problema que resuelve y situación actual.
-- Documentos fuente: `docs/requisitos/...` (sección/página).
+- Documentos fuente: `docs/requisitos/...` (sección/página) y/o «Requisitos aportados por <owner> el YYYY-MM-DD» (ver §14).
 
 ## 3. Alcance
 ### Incluye
@@ -67,7 +68,7 @@ Rendimiento esperado, volumen, disponibilidad, accesibilidad, retención (solo s
 - **RNF-01:** ...
 
 ## 12. OPEN QUESTIONS
-Preguntas sin respuesta en los documentos fuente. No inventar respuestas.
+Preguntas sin respuesta en los documentos fuente. No inventar respuestas. Al resolverlas, marcar `[x]`, anotar la respuesta y registrarla en §14.
 - [ ] ...
 
 ## 13. Checklist de spec lista (`status: ready`)
@@ -78,6 +79,8 @@ Preguntas sin respuesta en los documentos fuente. No inventar respuestas.
 - [ ] Todo requisito respaldado por `docs/requisitos/` o una decisión registrada.
 
 ## 14. Registro de cambios y aclaraciones
+Mantener los IDs `RN`/`CA`/`RNF` estables: no renumerar. Un criterio retirado se marca `~~CA-NN~~ (retirado: motivo)`.
+
 | Fecha | Cambio / aclaración | Fuente o persona consultada |
 |---|---|---|
-| | | |
+| YYYY-MM-DD | Creación con `/sdd-spec` | <documento fuente o requisitos aportados por owner> |

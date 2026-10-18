@@ -23,12 +23,15 @@ git switch develop
 git pull origin develop
 git switch -c feature/HU-EVAL-002
 
-# 2. Documentar e implementar con Claude Code (en la rama)
-#    /sdd-spec HU-EVAL-002 → /sdd-plan HU-EVAL-002 → /sdd-tasks HU-EVAL-002 → /sdd-implement HU-EVAL-002
+# 2. Documentar con Claude Code (en la rama)
+#    /sdd-spec HU-EVAL-002 <requisitos>  → spec.md + plan.md + tasks.md en draft
+#    Revisar y confirmar spec y plan en ready (/sdd-plan y /sdd-tasks si cambian requisitos)
 
 # 3. Commits pequeños en la rama
-git add specs/HU-EVAL-002/spec.md
-git commit -m "docs(HU-EVAL-002): crear spec de claves de respuesta versionadas"
+git add specs/HU-EVAL-002/
+git commit -m "docs(HU-EVAL-002): crear spec, plan y tareas"
+
+# 3b. Implementar (solo con spec y plan en ready): /sdd-implement HU-EVAL-002
 
 # 4. Mantener la rama al día con develop (periódicamente y antes del PR)
 git fetch origin
@@ -56,9 +59,8 @@ Formato: `<tipo>(<ID>): <descripción en imperativo>`
 
 Ejemplos de la secuencia de una historia:
 ```
-docs(HU-EVAL-002): crear spec de claves de respuesta versionadas
-docs(HU-EVAL-002): crear plan técnico
-docs(HU-EVAL-002): crear tareas
+docs(HU-EVAL-002): crear spec, plan y tareas
+docs(HU-EVAL-002): actualizar plan técnico tras aclarar CA-03
 feat(HU-EVAL-002): agregar esquema clave_respuesta e índices (T-01, T-02)
 test(HU-EVAL-002): cubrir unicidad de versión activa de clave (CA-02)
 feat(HU-EVAL-002): exponer endpoint de publicación de clave (T-07)
@@ -96,6 +98,6 @@ Para `main` y `develop`:
 - Bloquear force push y borrado.
 
 ## Uso de Claude Code con Git
-- Las skills SDD verifican que estés en `feature/<ID>` y se detienen si estás en `develop` o `main`.
-- Claude Code propone commits, pero solo los ejecuta si lo pides. Nunca hace `git push` ni crea PR (bloqueado en `.claude/settings.json`).
+- Las skills SDD verifican que estés en `feature/<ID>`: se detienen en `main`; en `develop`, `/sdd-spec` ofrece crear la rama (con tu confirmación) y nunca commitea fuera de `feature/<ID>`. `/sdd-implement` solo trabaja en `feature/<ID>`.
+- Claude Code propone commits, pero solo los ejecuta si lo pides. Nunca hace `git push`, crea PR ni borra ramas sin autorización (`git push` y `git branch -D` están bloqueados en `.claude/settings.json`).
 - Revisa siempre el diff antes de commitear.
