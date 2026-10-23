@@ -10,6 +10,7 @@ Fecha: 2026-10-09 · Fuente: `specs/roadmap.md` y `specs/HU-EVAL-001/spec.md`.
 
 | ID | Módulo | Título | Prioridad | Dependencias | Complejidad estimada | Responsable | Estado | Spec |
 |---|---|---|---|---|---|---|---|---|
+| HT-CORE-01 | Transversal | Base técnica, servicios locales y gestión de cuentas (RBAC) | Sin definir | Docker Desktop/WSL; archivos de setup · Bloque B: DT-01, DT-04, DT-05, DT-07 · Habilita a todas las HU | Sin definir | JulianD27-ia (Bloque A iniciado por Diego Alejandro Narvaez Meza) | in-progress | [spec](../specs/HT-CORE-01/spec.md) |
 | HU-EVAL-001 | Evaluación | Asociación automática de respuestas | Sin definir | Funcionales (según spec): estudiantes inscritos, exámenes, formas, roles DOCENTE/ADMIN · Técnicas: DT-01, DT-02, DT-03, DT-04, DT-05, DT-06, DT-07 | Sin definir | Sin asignar | draft (pendiente de revisión) | [spec](../specs/HU-EVAL-001/spec.md) |
 | HU-EVAL-002 | Evaluación | Claves de respuesta versionadas | Sin definir | Funcionales: requiere documento fuente · Técnicas: DT-01, DT-04, DT-05, DT-07 | Sin definir | Sin asignar | pending spec | — |
 | HU-EVAL-003 | Evaluación | Comparación automática con claves | Sin definir | Funcionales: requiere documento fuente · Técnicas: DT-01, DT-05, DT-07 | Sin definir | Sin asignar | pending spec | — |

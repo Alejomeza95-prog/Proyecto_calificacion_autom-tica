@@ -51,6 +51,8 @@ Abrir Claude Code **siempre desde la raíz del repositorio** (`claude`), para qu
 ## Comandos habituales
 | Acción | Comando |
 |---|---|
+| Verificar el entorno (sin contenedores) | `scripts/verify-local.ps1 -Static` |
+| Verificar el entorno completo | `scripts/verify-local.ps1` (`[OK]/[FALLA]` por criterio, código 0/1, sin imprimir secretos) |
 | Ver estado | `docker compose ps` |
 | Ver logs | `docker compose logs -f mongo` / `redis` |
 | Apagar sin borrar datos | `docker compose down` (o `scripts/docker-down.ps1`) |
@@ -61,7 +63,7 @@ Abrir Claude Code **siempre desde la raíz del repositorio** (`claude`), para qu
 | Servicio | Imagen | Puerto local | Persistencia | Perfil |
 |---|---|---|---|---|
 | `mongo` | `mongo:7` (standalone) | `127.0.0.1:${MONGO_PORT:-27017}` | volumen `mongo_data` | base |
-| `redis` | `redis:7-alpine` (AOF) | `127.0.0.1:${REDIS_PORT:-6379}` | volumen `redis_data` | base |
+| `redis` | `redis:7-alpine` (AOF, healthcheck `redis-cli ping`) | `127.0.0.1:${REDIS_PORT:-6379}` | volumen `redis_data` | base |
 | `api` | build `./apps/api` | `127.0.0.1:3000` | — | `app` |
 | `omr` | build `./apps/omr` | `127.0.0.1:8000` | — | `app` |
 | `web` | build `./apps/web` | `127.0.0.1:5173` | — | `app` |
@@ -72,3 +74,4 @@ Los puertos solo se publican en `127.0.0.1`, no en la red local.
 - **`mongo` no queda healthy:** revisar `docker compose logs mongo`. Si cambiaste usuario/contraseña después del primer arranque, MongoDB conserva las credenciales iniciales del volumen; un reset borra datos y requiere acuerdo.
 - **Error de autenticación desde la API:** la contraseña en la URI debe ir codificada para URL (`MONGO_ROOT_PASSWORD_URLENCODED`).
 - **El perfil `app` falla al construir:** las carpetas `apps/*` aún no existen.
+- **`port is already allocated`:** otro proyecto usa el puerto. Cambiar `REDIS_PORT` (y `REDIS_URL`) o `MONGO_PORT` (y `MONGODB_URI`) en `.env`.
