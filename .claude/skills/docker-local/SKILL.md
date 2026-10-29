@@ -12,7 +12,7 @@ Servicios de infraestructura:
 - `mongo` (MongoDB 7, standalone; sin replica set por ahora)
 - `redis`
 
-Servicios de aplicación se habilitan con el profile `app` cuando existan `apps/api`, `apps/web` y `apps/omr` con sus Dockerfiles.
+Servicios de aplicación (perfil `app`): `backend` (`apps/backend`, NestJS), `frontend` (`apps/frontend`, React + Vite) y `omr` (`apps/omr`, FastAPI). `omr` no se construye hasta que exista su carpeta (OMR-001..003): arrancar con `docker compose --profile app up -d --build backend frontend`.
 
 ## Variables
 - `.env` local basado en `.env.docker.example`; nunca versionarlo.

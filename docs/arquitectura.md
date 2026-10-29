@@ -5,8 +5,8 @@ Documento de presentación para el equipo. La fuente canónica es [`specs/000-ar
 ## Stack
 | Capa | Tecnología | Estado |
 |---|---|---|
-| Frontend | React + Vite + TypeScript | Aprobado · `apps/web` por crear |
-| Backend de negocio | NestJS + TypeScript + Mongoose (`@nestjs/mongoose`) | Aprobado · `apps/api` por crear |
+| Frontend | React + Vite + TypeScript | Aprobado · esqueleto en `apps/frontend` (HT-CORE-01) |
+| Backend de negocio | NestJS + TypeScript + Mongoose (`@nestjs/mongoose`) | Aprobado · esqueleto en `apps/backend` (HT-CORE-01) |
 | Base de datos | **MongoDB 7 (única)** | Aprobado · corre en Docker (standalone) |
 | Archivos (hojas, imágenes, cargas) | GridFS | **Propuesta pendiente de aprobación** por spec |
 | Procesamiento OMR | Python + FastAPI + OpenCV + NumPy | Aprobado · `apps/omr` por crear |
@@ -43,4 +43,4 @@ Flujo OMR:        React ──► NestJS ──► MongoDB (+ GridFS*) ──►
 |---|---|
 | `mongo` | Definido, healthcheck con `mongosh ping`, volumen `mongo_data` |
 | `redis` | Definido, AOF activado, volumen `redis_data` |
-| `api`, `omr`, `web` | Definidos en perfil `app`; no construibles hasta crear `apps/*` |
+| `backend`, `omr`, `frontend` | Perfil `app`. `backend` y `frontend` construibles (esqueletos de HT-CORE-01); `omr` pendiente de `apps/omr` |

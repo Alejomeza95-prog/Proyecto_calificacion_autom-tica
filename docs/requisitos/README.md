@@ -12,6 +12,7 @@ Verificado el repositorio y su carpeta contenedora: **no hay documentos fuente d
 | Backlog priorizado (prioridad, estimaciones, dependencias) | `backlog/` | Falta | Matriz de asignación; rendimiento citado en HU-EVAL-001 §8 |
 | Arquitectura técnica del sistema OMR | `arquitectura-tecnica/` | Falta | Contrastar con `specs/000-architecture` |
 | "Especificación MongoDB de HU-EVAL-001" | `historias/` | Falta | Reglas de persistencia de HU-EVAL-001 (citada en `SOURCE_OF_TRUTH.md`) |
+| HT-CORE-01 — Base técnica, configuración y servicios locales | `historias/HT-CORE-01.md` | Incorporado (2026-10-10; Bloque B de cuentas y RBAC agregado el 2026-10-22) | `specs/HT-CORE-01` |
 
 ## Cómo incorporarlos
 1. Rama `docs/requisitos-<tema>`.
