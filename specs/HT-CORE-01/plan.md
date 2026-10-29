@@ -15,11 +15,11 @@ updated: 2026-10-22
 ## 1. Resumen técnico
 **Bloque A — Base técnica y entorno local**
 
-Historia de infraestructura local y documentación. No crea código de aplicación, colecciones ni endpoints. Se trabaja sobre `docker-compose.yml` (healthcheck de Redis), un script nuevo de verificación `scripts/verify-local.ps1` que da evidencia reproducible de los CA sin imprimir secretos, el endurecimiento de `docker-up.ps1` y `docker-down.ps1`, y la consolidación de `README_SETUP.md`, `docs/onboarding/01` y `02`, y del registro de DT-01 en `docs/dependencias-transversales.md`.
+Historia de infraestructura local y documentación. No crea colecciones ni endpoints de negocio; la Fase 0B crea los esqueletos mínimos de `apps/backend` y `apps/frontend` (§9.8). Se trabaja sobre `docker-compose.yml` (healthcheck de Redis), un script nuevo de verificación `scripts/verify-local.ps1` que da evidencia reproducible de los CA sin imprimir secretos, el endurecimiento de `docker-up.ps1` y `docker-down.ps1`, y la consolidación de `README_SETUP.md`, `docs/onboarding/01` y `02`, y del registro de DT-01 en `docs/dependencias-transversales.md`.
 
 **Bloque B — Cuentas, acceso y RBAC (antes HT-AUTH-01)**
 
-Módulos NestJS `users`, `auth`, `security-tokens`, `sessions`, `mail`, `audit` y `authz` en `apps/api`, con persistencia en MongoDB mediante Mongoose (colecciones `usuarios`, `tokens_seguridad`, `sesiones` y `auditoria_auth`) y limitación de intentos con contadores en Redis. La consistencia se apoya en índices únicos y operaciones atómicas de un documento, sin transacciones (DT-02 sin resolver). La propuesta de sesión es un JWT de acceso corto con identificador de sesión revocable, más un token de renovación opaco en una cookie `HttpOnly` (DEC-05, pendiente de aprobación). En `apps/web`, la feature `auth` contiene las 7 pantallas, el guardia de rutas privadas y el estado de sesión basado en `GET /auth/me`.
+Módulos NestJS `users`, `auth`, `security-tokens`, `sessions`, `mail`, `audit` y `authz` en `apps/backend`, con persistencia en MongoDB mediante Mongoose (colecciones `usuarios`, `tokens_seguridad`, `sesiones` y `auditoria_auth`) y limitación de intentos con contadores en Redis. La consistencia se apoya en índices únicos y operaciones atómicas de un documento, sin transacciones (DT-02 sin resolver). La propuesta de sesión es un JWT de acceso corto con identificador de sesión revocable, más un token de renovación opaco en una cookie `HttpOnly` (DEC-05, pendiente de aprobación). En `apps/frontend`, la feature `auth` contiene las 7 pantallas, el guardia de rutas privadas y el estado de sesión basado en `GET /auth/me`.
 
 ## 2. Arquitectura
 **Bloque A — Base técnica y entorno local**
@@ -32,8 +32,12 @@ Módulos NestJS `users`, `auth`, `security-tokens`, `sessions`, `mail`, `audit` 
 | Exclusiones de Git | `.gitignore` | Sin cambios previstos. Se verifica con `git check-ignore -v .env`. |
 | Scripts | `scripts/verify-local.ps1` (nuevo), `scripts/docker-up.ps1`, `scripts/docker-down.ps1` | Verificación con salida `[OK]`/`[FALLA]`. `up` valida antes de arrancar y `down` nunca usa `-v`. |
 | Documentación | `README_SETUP.md`, `docs/onboarding/01-instalacion.md`, `docs/onboarding/02-variables-entorno.md` | Inicio, comprobación, logs, apagado seguro y enlaces SDD. |
-| Decisiones transversales | `docs/dependencias-transversales.md` (DT-01) | Estructura verificada de `apps/*` y convenciones de frontend pendientes. |
-| API / web / OMR | `apps/*` | **No aplica:** no existen y no se crean (RN-05, DT-01). |
+| Decisiones transversales | `docs/dependencias-transversales.md` (DT-01) | Estructura aprobada de `apps/*` y convenciones de frontend pendientes. |
+| Backend NestJS | `apps/backend/` | Esqueleto: `package.json`, `tsconfig` estricto, `src/main.ts`, `AppModule`, `HealthController`, ESLint, Jest y Dockerfile (§9.8, DEC-12..DEC-15). |
+| Frontend React | `apps/frontend/` | Esqueleto: Vite + React + TypeScript estricto, `App` mínima, ESLint, Vitest y Dockerfile (§9.8). |
+| Compose | `docker-compose.yml` | Servicios `backend` y `frontend` (antes `api` y `web`) con contexto `./apps/backend` y `./apps/frontend`; healthcheck del backend. `omr` sin cambios. |
+| Plantillas | `docker/templates/` | `backend.Dockerfile.example` y `frontend.Dockerfile.example` (antes `api` y `web`). |
+| Motor OMR | `apps/omr/` | **No aplica:** se conserva el servicio, sin scaffolding (OMR-001..003). |
 
 ### 2.2 Flujo técnico
 ```
@@ -54,6 +58,7 @@ docker compose down (sin -v) ──► volúmenes mongo_data / redis_data conser
 | `scripts/docker-down.ps1` + `README_SETUP.md` §apagado | Apagado sin `-v`, con advertencia explícita | RN-03 |
 | `scripts/verify-local.ps1` | Comprobar CA sin imprimir valores. Detectar contraseñas en logs comparando en memoria | RN-01, RN-02, RN-04 |
 | Registro DT-01 | Estructura de `apps/*` confirmada antes de cualquier scaffolding | RN-05 |
+| Esqueletos `apps/backend` y `apps/frontend` | Configuración, health check y pruebas del propio esqueleto, sin código de negocio | RN-05, RN-20 |
 | `docs/onboarding/02-variables-entorno.md` | Tabla de variables idéntica a la plantilla | RN-06 |
 
 **Bloque B — Cuentas, acceso y RBAC (antes HT-AUTH-01)**
@@ -61,15 +66,15 @@ docker compose down (sin -v) ──► volúmenes mongo_data / redis_data conser
 ### 2.1 Componentes afectados
 | Componente | Ruta | Cambio |
 |---|---|---|
-| API NestJS | `apps/api/src/users/` | Esquema `usuarios`, repositorio y servicio de cuentas y estados. |
-| API NestJS | `apps/api/src/auth/` | Controlador `/api/v1/auth/*`, servicios de registro, login, verificación y recuperación, y DTOs. |
-| API NestJS | `apps/api/src/security-tokens/` | Emisión, hash, invalidación y consumo atómico de tokens. |
-| API NestJS | `apps/api/src/sessions/` | Sesiones revocables y emisión y validación de credenciales de sesión. |
-| API NestJS | `apps/api/src/mail/` | Puerto `MailSender`, adaptador SMTP y plantillas. |
-| API NestJS | `apps/api/src/audit/` | Escritura de `auditoria_auth` con redacción de secretos. |
-| API NestJS | `apps/api/src/authz/` | `JwtAuthGuard`, `RolesGuard`, decoradores `@Roles()` y `@Public()`, y política de alcance por institución. |
-| API NestJS | `apps/api/src/common/rate-limit/` | Limitador por IP, cuenta y ventana sobre Redis. |
-| Frontend React | `apps/web/src/features/auth/` | 7 pantallas, cliente API, estado de sesión y `RequireAuth`. |
+| API NestJS | `apps/backend/src/users/` | Esquema `usuarios`, repositorio y servicio de cuentas y estados. |
+| API NestJS | `apps/backend/src/auth/` | Controlador `/api/v1/auth/*`, servicios de registro, login, verificación y recuperación, y DTOs. |
+| API NestJS | `apps/backend/src/security-tokens/` | Emisión, hash, invalidación y consumo atómico de tokens. |
+| API NestJS | `apps/backend/src/sessions/` | Sesiones revocables y emisión y validación de credenciales de sesión. |
+| API NestJS | `apps/backend/src/mail/` | Puerto `MailSender`, adaptador SMTP y plantillas. |
+| API NestJS | `apps/backend/src/audit/` | Escritura de `auditoria_auth` con redacción de secretos. |
+| API NestJS | `apps/backend/src/authz/` | `JwtAuthGuard`, `RolesGuard`, decoradores `@Roles()` y `@Public()`, y política de alcance por institución. |
+| API NestJS | `apps/backend/src/common/rate-limit/` | Limitador por IP, cuenta y ventana sobre Redis. |
+| Frontend React | `apps/frontend/src/features/auth/` | 7 pantallas, cliente API, estado de sesión y `RequireAuth`. |
 | Compose (solo local) | `docker-compose.yml` | Servicio de captura de correo para desarrollo (DEC-09, propuesta). |
 | Plantilla de entorno | `.env.docker.example` + `docs/onboarding/02-variables-entorno.md` | Variables nuevas con marcadores (§9.7). |
 | Motor OMR / workers | — | No aplica. |
@@ -230,7 +235,11 @@ Herramienta pendiente (DT-07). Scripts propuestos:
 ## 8. Endpoints
 **Bloque A — Base técnica y entorno local**
 
-No aplica: sin endpoints funcionales. El health check de las aplicaciones se definirá al implementar cada app (DT-01).
+Solo el health check del esqueleto del backend (DEC-15):
+
+| Método | Path | Rol | Request | Response | Códigos | Idempotencia | CA |
+|---|---|---|---|---|---|---|---|
+| GET | `/api/v1/health` | público | — | `{ "status": "ok" }` | 200 | sí | CA-21 |
 
 **Bloque B — Cuentas, acceso y RBAC (antes HT-AUTH-01)**
 
@@ -266,7 +275,7 @@ Prefijo propuesto `/api/v1/auth` (ajustar a la convención de NestJS que fije DT
 | 5 | `docker compose config --quiet` = 0 | CA-01 | `-Static` y completo |
 | 6 | `docker info` responde (Docker operativo) | CA-02 | completo |
 | 7 | `mongo` y `redis` en estado `healthy` | CA-02, CA-04 | completo |
-| 8 | Ningún servicio del perfil `app` en ejecución | CA-02 | completo |
+| 8 | Ningún servicio del perfil `app` en ejecución sin su carpeta `apps/<servicio>` (antes de la Fase 0B: ningún servicio `app` en ejecución) | CA-02, RN-05 | completo |
 | 9 | `docker compose logs mongo redis` no contiene la contraseña de `.env` (leída en memoria, nunca impresa) | CA-04, RN-04 | completo |
 
 Salida: una línea por comprobación `[OK]`/`[FALLA] <CA>: <motivo sin valores>`. Código de salida 0 si todo pasa y 1 si algo falla.
@@ -277,6 +286,17 @@ Salida: una línea por comprobación `[OK]`/`[FALLA] <CA>: <motivo sin valores>`
 - Estado: `docker compose ps`; logs: `docker compose logs --tail 100 mongo redis`
 - Verificar: `scripts/verify-local.ps1`
 - Apagar sin borrar datos: `docker compose down` (o `scripts/docker-down.ps1`). `down -v` y `docker-reset.ps1` solo con confirmación y sin datos que conservar.
+- Aplicaciones: `docker compose --profile app up -d --build backend frontend` (sin `omr` hasta OMR-001).
+
+### 9.8 Contrato de los esqueletos de aplicación (Fase 0B)
+| Carpeta | Stack | Scripts (`pnpm <script>`) | Puerto | Verificación |
+|---|---|---|---|---|
+| `apps/backend` | NestJS 12 + TypeScript ~6.0 estricto, Jest + Supertest | `build`, `start`, `start:dev`, `lint`, `typecheck`, `test` | 3000, prefijo global `api/v1` | `GET /api/v1/health` → 200 `{ "status": "ok" }` |
+| `apps/frontend` | React 19 + Vite 8 + TypeScript ~6.0 estricto, Vitest + Testing Library | `dev`, `build`, `preview`, `lint`, `typecheck`, `test` | 5173 | Página inicial servida por Vite |
+
+- Cada carpeta tiene su `package.json`, su `pnpm-lock.yaml`, su `Dockerfile` (desde `docker/templates/`) y su `.dockerignore`, porque Compose construye cada una con su propio contexto (DEC-13).
+- Node >= 22 (`engines`); pnpm mediante corepack (`packageManager`).
+- Sin variables de entorno nuevas: el esqueleto no lee `.env` (RN-06 sin cambios). Las variables públicas del frontend siguen pendientes (CA-08).
 
 **Bloque B — Cuentas, acceso y RBAC (antes HT-AUTH-01)**
 
@@ -298,7 +318,7 @@ La biblioteca de validación (class-validator o Zod) se fija con DT-01 (skill `t
 | `mail` (BullMQ, propuesta DEC-08) | `AuthService` | `MailWorker` | `{ plantilla, usuarioId, enlaceRef }`: el token crudo viaja solo dentro del job en Redis, nunca en los logs | 3 intentos, exponencial | `jobId` = `tokenId` |
 
 ### 9.6 Tipos compartidos frontend ↔ backend
-`AccountStatus`, `Role`, `MeResponse` y los DTOs de request en un paquete compartido si DT-01 lo aprueba; si no, se duplican en `apps/web/src/features/auth/types.ts` con una prueba de contrato.
+`AccountStatus`, `Role`, `MeResponse` y los DTOs de request en un paquete compartido si DT-01 lo aprueba; si no, se duplican en `apps/frontend/src/features/auth/types.ts` con una prueba de contrato.
 
 ### 9.7 Variables de entorno nuevas (solo marcadores en `.env.docker.example`)
 `APP_PUBLIC_URL`, `JWT_ACCESS_SECRET`, `JWT_ACCESS_TTL=15m`, `SESSION_REFRESH_TTL=7d`, `VERIFY_TOKEN_TTL=24h`, `RESET_TOKEN_TTL=30m`, `RATE_LIMIT_*` (por ruta, IP y cuenta), `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `AUDIT_IP_PEPPER`. Todas se documentan en `docs/onboarding/02-variables-entorno.md` (regla del repositorio).
@@ -309,10 +329,10 @@ La biblioteca de validación (class-validator o Zod) se fija con DT-01 (skill `t
 | Tipo | Dependencia | Estado | Impacto si no está lista |
 |---|---|---|---|
 | Entorno | Docker Desktop/WSL con Compose v2 | Requisito de cada máquina | CA-02, CA-04 y CA-07 no se pueden verificar. |
-| Técnica transversal | DT-01 (estructura de apps) | Pendiente | No bloquea: esta historia solo la registra (CA-08). |
+| Técnica transversal | DT-01 (estructura de apps) | Parcial (2026-10-28): estructura y esqueletos de backend y frontend resueltos aquí; workspaces y tipos compartidos pendientes | No bloquea. |
 | Técnica transversal | DT-08 (CI) | Pendiente | No bloquea: los comandos de CI quedan como OPEN QUESTION. |
 | Rama | `origin/feature/HT-CORE-01` previa | Sin fusionar | Riesgo de conflicto al hacer push o PR (§15). |
-| Librería nueva | Ninguna | — | — |
+| Librería nueva | Esqueletos: `@nestjs/*`, `react`, `vite`, `typescript`, `eslint`, `jest`, `vitest` y afines (§9.8) | Stack aprobado por la arquitectura | Sin ellas no hay esqueleto (CA-21). |
 
 **Bloque B — Cuentas, acceso y RBAC (antes HT-AUTH-01)**
 
@@ -366,12 +386,14 @@ La biblioteca de validación (class-validator o Zod) se fija con DT-01 (skill `t
 | CA-05 | Revisión documental | Todos los enlaces de `README_SETUP.md` resuelven a archivos existentes | Script de comprobación de enlaces (`Test-Path` por enlace) | — |
 | CA-06 | Revisión + manual | `docker-down.ps1` no contiene `-v`/`--volumes`. Tras `down` y `up`, los volúmenes `mongo_data` y `redis_data` siguen existiendo (`docker volume ls`) | `Select-String`, Docker | — |
 | CA-07 | Manual reproducible | Otro integrante sigue `README_SETUP.md` desde un clon limpio y `verify-local.ps1` devuelve 0 | Checklist en la evidencia de la tarea | Su propio `.env` |
-| CA-08 | Revisión documental | DT-01 registra que `apps/*` no existe y lista las convenciones de frontend pendientes; `Test-Path apps` = False | Revisión del diff | — |
+| CA-08 | Revisión documental | DT-01 registra la estructura aprobada (`apps/backend`, `apps/frontend`, `apps/omr`) y lista las convenciones de frontend pendientes | Revisión del diff | — |
+| CA-21 | Esqueleto (unit + E2E) + Compose | `pnpm install --frozen-lockfile`, `lint`, `typecheck`, `test` y `build` en verde en ambas apps; prueba E2E de `GET /api/v1/health`; `docker compose --profile app up -d --build backend frontend` → backend `healthy` y frontend responde 200 | pnpm, Jest + Supertest, Vitest, Docker | — |
 | RN-01 | Verificación | Comprobaciones 2–4 | `verify-local.ps1` | — |
 | RN-02 | Revisión | El procedimiento documentado usa `Test-Path` antes de `Copy-Item` | Revisión | — |
 | RN-03 | Revisión | Igual que CA-06 | `Select-String` | — |
 | RN-04 | Verificación | Comprobación 9; la salida del script no contiene valores | `verify-local.ps1` | — |
-| RN-05 | Revisión | No se crean carpetas `apps/` en el diff | `git diff --stat` | — |
+| RN-05 | Revisión | El diff solo crea `apps/backend` y `apps/frontend`; no existe `apps/omr` ni otras carpetas | `git diff --stat` | — |
+| RN-20 | Revisión | Los esqueletos solo contienen configuración, `HealthController`, `App` mínima y sus pruebas | Revisión del diff | — |
 | RN-06 | Verificación | Las variables de la tabla de `02-variables-entorno.md` coinciden con las claves de `.env.docker.example` | Comparación en PowerShell | — |
 | RNF-01 | Manual reproducible | Igual que CA-07 | — | — |
 
@@ -436,8 +458,12 @@ Herramientas propuestas (sujetas a DT-05): Jest + Supertest en la API, MongoDB r
 |---|---|---|---|---|
 | DEC-01 | Propuesta: script `scripts/verify-local.ps1` (con modo `-Static`) como evidencia reproducible de los CA | Solo comandos manuales documentados | Repetibilidad (CA-07) y verificación sin exponer secretos (RN-04) | 2026-10-22 |
 | DEC-02 | Propuesta: healthcheck `redis-cli ping` en `redis` | Mantener `service_started` | Skill `docker-local`: healthchecks en dependencias críticas. Permite verificar disponibilidad (CA-02, CA-04) | 2026-10-22 |
-| DEC-03 | Propuesta: registrar estructura de apps y convenciones de frontend en DT-01, sin crear carpetas | Crear scaffolding mínimo | RN-05; la estructura del monorepo sigue abierta | 2026-10-22 |
+| DEC-03 | ~~Propuesta: registrar estructura de apps y convenciones de frontend en DT-01, sin crear carpetas~~ (reemplazada por DEC-12) | Crear scaffolding mínimo | RN-05; la estructura del monorepo sigue abierta | 2026-10-22 |
 | DEC-04 | Propuesta: scripts solo para PowerShell (Windows) | Agregar equivalentes `.sh` | Supuesto de spec §3; los scripts existentes son `.ps1` | 2026-10-22 |
+| DEC-12 | **Aprobada por el responsable:** estructura `apps/backend`, `apps/frontend` y `apps/omr`; esqueletos de backend y frontend en esta historia | `apps/api` y `apps/web`; historia técnica aparte | Decisión del responsable (spec §14) | 2026-10-28 |
+| DEC-13 | Propuesta: cada app es una carpeta independiente con su `package.json` y `pnpm-lock.yaml`, sin workspace raíz | pnpm workspaces | Coincide con los contextos de build de Compose y las plantillas (`COPY package.json pnpm-lock.yaml*`); los workspaces pueden adoptarse después sin mover carpetas | 2026-10-28 |
+| DEC-14 | Propuesta: TypeScript ~6.0 estricto; ESLint (flat config) + typescript-eslint; Jest + ts-jest + Supertest en backend; Vitest + Testing Library en frontend; sin formateador hasta decidir la convención (CA-08) | TypeScript 7; Vitest en backend | TS 7 aún no es compatible con Nest CLI, typescript-eslint ni ts-jest; plan §12 propone Jest en la API y Vitest en web (DT-05) | 2026-10-28 |
+| DEC-15 | Propuesta: prefijo global `api/v1` y `GET /api/v1/health` sin dependencia de MongoDB; healthcheck de Compose con `wget` | `@nestjs/terminus` con ping a MongoDB | El esqueleto aún no conecta a MongoDB (RN-20); el prefijo coincide con los endpoints del Bloque B | 2026-10-28 |
 
 **Bloque B — Cuentas, acceso y RBAC (antes HT-AUTH-01)**
 
@@ -454,16 +480,17 @@ Herramientas propuestas (sujetas a DT-05): Jest + Supertest en la API, MongoDB r
 ## 15. Riesgos y OPEN QUESTIONS técnicas
 **Bloque A — Base técnica y entorno local**
 
-- [ ] **Conflicto de rama:** `origin/feature/HT-CORE-01` contiene una implementación previa (healthcheck de redis, `verify-local.ps1`, cambios de docs). Esta rama local no la sigue. Decidir antes de hacer push si se reutiliza ese trabajo o se sustituye.
+- [x] **Conflicto de rama** (resuelto con el merge `09d1986`, 2026-10-22): `origin/feature/HT-CORE-01` contiene una implementación previa (healthcheck de redis, `verify-local.ps1`, cambios de docs). Esta rama local no la sigue. Decidir antes de hacer push si se reutiliza ese trabajo o se sustituye.
 - [ ] Comandos de test/lint que exige CI (DT-08).
-- [ ] Estructura final del monorepo (DT-01).
+- [x] Estructura de carpetas (DEC-12, 2026-10-28).
+- [ ] Workspaces y tipos compartidos (DT-01, DEC-13).
 - [ ] ¿Se necesitan scripts equivalentes para macOS/Linux? (DEC-04).
 - [ ] Archivo `env` sin seguimiento en la raíz de algunas copias de trabajo: no lo cubre la regla `.env`. Revisar si contiene secretos y si `.gitignore` debe excluirlo.
 
 **Bloque B — Cuentas, acceso y RBAC (antes HT-AUTH-01)**
 
 - [ ] **DT-04 bloqueante:** aprobar DEC-05 (cookie o token), el catálogo de roles y quién aprueba.
-- [ ] **DT-01, DT-05 y DT-07 bloqueantes:** sin apps, sin estrategia de pruebas y sin herramienta de migraciones no se puede implementar.
+- [ ] **DT-05 y DT-07 bloqueantes:** sin estrategia de pruebas aprobada y sin herramienta de migraciones no se puede implementar. DT-01 queda resuelta en lo necesario por la Fase 0B (esqueletos).
 - [ ] Proveedor de correo de producción y aprobación de Mailpit para local (DEC-09).
 - [ ] ¿La cola de correo (DEC-08) entra en esta historia o se envía de forma síncrona hasta DT-06?
 - [ ] Convención de nombres de campos en MongoDB (español snake_case, como se propuso, o camelCase).
@@ -493,3 +520,4 @@ No borrar decisiones ni contenido aprobado: las decisiones superadas se marcan �
 | 2026-10-22 | Creación con `/sdd-spec` | — | — → draft |
 | 2026-10-22 | Fusión de HT-AUTH-01 como Bloque B (IDs renumerados; las subsecciones §9.4–§9.7 son las antiguas §9.1–§9.4 de HT-AUTH-01) | spec §14 | draft → draft |
 | 2026-10-22 | Plan aprobado por el responsable. | Confirmación en sesión | draft → ready |
+| 2026-10-28 | Fase 0B: estructura `apps/backend`/`apps/frontend` (DEC-12..DEC-15), §9.8, endpoint de health, CA-21 y RN-20 en §12; rutas del Bloque B renombradas. Aprobado por el responsable en la misma instrucción | spec §14 | ready → ready |

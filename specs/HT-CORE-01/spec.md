@@ -30,6 +30,7 @@ Ambos bloques forman una sola historia por decisión del responsable (ver §14).
   - `.env.docker.example` solo contiene marcadores `cambiar_*`. `.gitignore` excluye `.env`, `.env.*` y `*.env`.
   - Existen `README_SETUP.md`, `docs/onboarding/00..05`, `scripts/docker-up.ps1`, `docker-down.ps1`, `docker-reset.ps1` y `sdd-validate.ps1`.
   - **`apps/api`, `apps/web` y `apps/omr` no existen**. Su creación es la decisión transversal DT-01. Hay plantillas en `docker/templates/`.
+- **Actualización 2026-10-28:** el responsable fija la estructura `apps/backend` (NestJS) y `apps/frontend` (React + Vite), que reemplaza los nombres previstos `apps/api` y `apps/web`. `apps/omr` se conserva como servicio independiente del motor OMR. Esta historia crea los esqueletos mínimos de backend y frontend (Fase 0B); el de OMR queda para OMR-001..003.
 - **Antecedente:** existe la rama remota `origin/feature/HT-CORE-01` (otro responsable, 2026-10-10), sin fusionar en `develop`. Esta spec se generó de nuevo por decisión del responsable actual. El equipo debe conciliar ambas ramas antes del PR (ver §12).
 - Esta historia **consolida y verifica** la base existente. No rediseña la infraestructura.
 
@@ -52,13 +53,15 @@ Ambos bloques forman una sola historia por decisión del responsable (ver §14).
 - Validar la configuración de Docker Compose y arrancar MongoDB y Redis cuando Docker Engine esté operativo.
 - Verificar el estado de los servicios con su estado y sus logs.
 - Documentar los comandos de inicio, comprobación y apagado seguro.
-- Confirmar la estructura real de `apps/api` y `apps/web` antes de cualquier scaffolding.
+- Confirmar la estructura de aplicaciones antes de cualquier scaffolding.
+- Crear los esqueletos mínimos de `apps/backend` (NestJS) y `apps/frontend` (React + Vite), sin código de negocio, con lint, typecheck, pruebas, build, Dockerfile y health check del backend (decisión del responsable, 2026-10-28).
 - Dejar identificadas, para que el equipo las defina, las convenciones de lint, formato, pruebas y variables públicas/privadas del frontend.
 - Instrucciones breves para configurar el entorno local.
 
 ### Fuera de alcance
-- Crear el scaffolding de `apps/api`, `apps/web` o `apps/omr` (DT-01).
-- Endpoints funcionales. El health check de las aplicaciones se definirá según la implementación.
+- Crear el scaffolding de `apps/omr` (historias OMR-001..003).
+- Código de negocio en `apps/backend` o `apps/frontend`: llega con el Bloque B y con las demás historias.
+- Endpoints funcionales. El Bloque A solo expone el health check del backend.
 - Replica set de MongoDB (DT-02), GridFS (DT-03), colas (DT-06) y migraciones (DT-07).
 - Configurar CI y la protección de ramas (DT-08).
 - Decidir las convenciones del frontend: esta historia solo las identifica y les asigna responsable.
@@ -90,7 +93,7 @@ Ambos bloques forman una sola historia por decisión del responsable (ver §14).
 
 ### Supuestos
 - El Bloque A deja disponibles MongoDB y Redis en local.
-- DT-01 resuelve la creación de `apps/api` y `apps/web` antes de implementar.
+- La Fase 0B de esta historia crea `apps/backend` y `apps/frontend` (DT-01, parcial) antes de implementar el Bloque B.
 - Existe un medio de prueba de correo que no entrega mensajes reales (pendiente de decisión).
 
 ## 4. Dependencias funcionales
@@ -114,8 +117,9 @@ Ambos bloques forman una sola historia por decisión del responsable (ver §14).
 - **RN-02:** si `.env` ya existe, no se sobrescribe: se integran las variables nuevas.
 - **RN-03:** no se ejecuta `docker compose down -v` (ni otra eliminación de volúmenes) en entornos con datos que deban conservarse. El apagado habitual conserva los datos.
 - **RN-04:** no se registran URI de conexión completas ni contraseñas en logs, documentación, specs, PR ni salidas de consola compartidas.
-- **RN-05:** no se crea scaffolding sin confirmar antes la estructura real de `apps/api` y `apps/web`.
+- **RN-05:** no se crea scaffolding fuera de la estructura aprobada: `apps/backend` (NestJS), `apps/frontend` (React + Vite) y `apps/omr` (motor OMR, reservado para OMR-001..003).
 - **RN-06:** toda variable nueva se agrega a la plantilla con un marcador y se documenta en `docs/onboarding/02-variables-entorno.md` (regla vigente del repositorio).
+- **RN-20:** los esqueletos de aplicación no contienen código de negocio ni implementaciones ficticias: solo configuración, el health check del backend y las pruebas que verifican el propio esqueleto.
 
 **Bloque B — Cuentas, acceso y RBAC (antes HT-AUTH-01)**
 
@@ -270,7 +274,12 @@ Ambos bloques forman una sola historia por decisión del responsable (ver §14).
 ### CA-08 — Estructura de apps y convenciones de frontend identificadas
 **Dado** que se va a crear scaffolding de aplicaciones  
 **Cuando** se consulta la documentación del proyecto  
-**Entonces** queda registrada la estructura real de `apps/api` y `apps/web`, y las convenciones de frontend pendientes (lint, formato, pruebas y variables públicas/privadas) figuran como decisiones de equipo con su dependencia técnica asociada.
+**Entonces** queda registrada la estructura aprobada (`apps/backend`, `apps/frontend` y `apps/omr`), y las convenciones de frontend pendientes (lint, formato, pruebas y variables públicas/privadas) figuran como decisiones de equipo con su dependencia técnica asociada.
+
+### CA-21 — Esqueletos de backend y frontend construibles
+**Dado** la estructura `apps/backend` y `apps/frontend`
+**Cuando** se instalan sus dependencias y se ejecutan lint, typecheck, pruebas y build, y se arrancan con Docker Compose (perfil `app`)
+**Entonces** todo termina sin errores, el backend responde a su health check, el frontend sirve su página inicial y ninguno contiene código de negocio.
 
 **Bloque B — Cuentas, acceso y RBAC (antes HT-AUTH-01)**
 
@@ -358,7 +367,8 @@ Ambos bloques forman una sola historia por decisión del responsable (ver §14).
 ## 12. OPEN QUESTIONS
 **Bloque A — Base técnica y entorno local**
 
-- [ ] ¿Cuál es la estructura final del monorepo (pnpm workspaces o carpetas independientes, paquete de tipos compartidos)? → DT-01.
+- [x] Estructura de carpetas: `apps/backend`, `apps/frontend` y `apps/omr` (decisión del responsable, 2026-10-28).
+- [ ] pnpm workspaces o carpetas independientes y paquete de tipos compartidos → DT-01 (propuesta en plan DEC-13).
 - [ ] ¿Qué comandos de test y lint exige CI? → DT-08.
 - [ ] ¿Quién define las convenciones de frontend (lint, formato, pruebas, variables públicas/privadas) y en qué historia se implementan?
 - [ ] ¿Cómo se concilia esta rama con `origin/feature/HT-CORE-01` (implementación previa de otro responsable): se sustituye, se fusiona o se renombra esta rama?
@@ -392,3 +402,4 @@ Mantener los IDs `RN`/`CA`/`RNF` estables: no renumerar. Un criterio retirado se
 | 2026-10-22 | Creación con `/sdd-spec`. CA-09..CA-20 transcriben CA-AUTH-01..12. Las RN provienen de los criterios, las tareas de backend y la sección de seguridad aportadas. RNF-02..04 y RNF-07 provienen de la sección de seguridad; RNF-06 de las tareas de frontend. §6.4 aplica la guía `impeccable` (harden y clarify) sin agregar comportamiento de negocio. | Requisitos aportados por JulianD27-ia, 2026-10-22 (guardado en `docs/requisitos/historias/HT-CORE-01.md`) |
 | 2026-10-22 | Fusión de HT-AUTH-01 en HT-CORE-01 como Bloque B. Los IDs del Bloque B se renumeraron una sola vez, antes de cualquier aprobación: CA +8, RN +6, RNF +1, T +12, DEC +4. Se eliminan `specs/HT-AUTH-01/` y la rama `feature/HT-AUTH-01`. | JulianD27-ia |
 | 2026-10-22 | Spec revisada y aprobada por el responsable; inicio de implementación (Fase 0). | JulianD27-ia |
+| 2026-10-28 | Estructura de aplicaciones fijada por el responsable: `apps/backend` y `apps/frontend` (antes `apps/api` y `apps/web`); `apps/omr` se conserva. El scaffolding mínimo de backend y frontend entra en el alcance del Bloque A (Fase 0B). Se reformulan RN-05 y CA-08 y se agregan RN-20 y CA-21. El responsable pidió implementarlo en la misma instrucción, por lo que la spec sigue en `in-progress`. | JulianD27-ia |

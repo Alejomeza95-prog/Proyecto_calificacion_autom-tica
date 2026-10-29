@@ -31,7 +31,7 @@ Si `plan.md` ya existe:
 7. «Regenerar» significa rehacer las secciones a partir de la spec actual conservando lo anterior; nunca sobrescribir el archivo completo sin confirmación explícita.
 
 ## Contenido a cubrir (plantilla §1–§16)
-1. Resumen técnico y componentes afectados (`apps/api`, `apps/web`, `apps/omr`, workers).
+1. Resumen técnico y componentes afectados (`apps/backend`, `apps/frontend`, `apps/omr`, workers).
 2. Flujo técnico y módulos, indicando qué reglas `RN-NN` implementa cada uno.
 3. **Colecciones y esquemas Mongoose:** `collection:` explícito, campos, tipos, validaciones, referencias `ObjectId`, `schemaVersion`, PII.
 4. **Índices:** cada uno justificado por una consulta, regla o criterio.

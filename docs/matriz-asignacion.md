@@ -26,7 +26,7 @@ Fecha: 2026-10-09 · Fuente: `specs/roadmap.md` y `specs/HU-EVAL-001/spec.md`.
 ## Asignación técnica transversal
 | ID | Decisión | Responsable | Estado |
 |---|---|---|---|
-| DT-01 | Creación de `apps/api`, `apps/web`, `apps/omr` | Sin asignar | Pendiente |
+| DT-01 | Creación de `apps/backend`, `apps/frontend`, `apps/omr` | HT-CORE-01 (backend y frontend) | Parcial |
 | DT-02 | Replica set de MongoDB | Sin asignar | Pendiente |
 | DT-03 | GridFS para archivos | Sin asignar | Propuesta |
 | DT-04 | Autenticación y RBAC | Sin asignar | Pendiente |

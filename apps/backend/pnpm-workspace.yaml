@@ -1,0 +1,6 @@
+# Configuración de pnpm para esta app (carpeta independiente, HT-CORE-01 DEC-13).
+# Scripts de build de dependencias: denegados. Ambos paquetes traen binarios precompilados;
+# su script solo es un respaldo para compilar o descargar el binario.
+allowBuilds:
+  '@parcel/watcher': false
+  unrs-resolver: false

@@ -58,7 +58,7 @@ Crear `specs/<ID>/` y, a partir de las plantillas oficiales, **sin eliminar secc
 ### 2.2 `plan.md` — desde `specs/_templates/plan-template.md`
 Propuesta de diseño técnico coherente con la arquitectura aprobada:
 - Front matter con `status: draft`.
-- Componentes (`apps/api`, `apps/web`, `apps/omr`, workers) y módulos indicando qué `RN-NN` implementa cada uno.
+- Componentes (`apps/backend`, `apps/frontend`, `apps/omr`, workers) y módulos indicando qué `RN-NN` implementa cada uno.
 - Colecciones y esquemas Mongoose con `collection:` explícito, validaciones, referencias `ObjectId`, `schemaVersion` y PII.
 - Índices justificados por una consulta, `RN` o `CA`.
 - Consistencia: transacciones solo con replica set (DT-02); si no está resuelta, índices únicos, operaciones atómicas o `bulkWrite` idempotente.

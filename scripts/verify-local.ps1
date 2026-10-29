@@ -81,9 +81,10 @@ try {
         else { Report ($svc.State -eq 'running' -and $svc.Health -eq 'healthy') 'CA-02' "$name disponible (healthy)" ("estado: " + $svc.State + ", salud: " + $svc.Health) }
       }
 
-      # 8. Perfil app apagado (CA-02, RN-05).
-      $appRunning = @($services | Where-Object { $_.Service -in 'api', 'omr', 'web' -and $_.State -eq 'running' } | ForEach-Object { $_.Service })
-      Report ($appRunning.Count -eq 0) 'RN-05' 'perfil app apagado' ("en ejecucion: " + ($appRunning -join ', '))
+      # 8. Servicios del perfil app solo si existe su carpeta apps/<servicio> (CA-02, RN-05).
+      $appRunning = @($services | Where-Object { $_.Service -in 'backend', 'omr', 'frontend' -and $_.State -eq 'running' } | ForEach-Object { $_.Service })
+      $orphans = @($appRunning | Where-Object { -not (Test-Path -LiteralPath (Join-Path 'apps' $_)) })
+      Report ($orphans.Count -eq 0) 'RN-05' 'servicios del perfil app solo con su carpeta en apps/' ("sin carpeta: " + ($orphans -join ', '))
 
       # 9. Logs sin contrasenas (CA-04, RN-04). Los valores solo se usan en memoria.
       if ($envExists) {

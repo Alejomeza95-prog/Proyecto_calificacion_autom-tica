@@ -43,7 +43,23 @@ Si Redis no arranca con `port is already allocated`, otro proyecto usa el puerto
 ## 5. Conectar la API
 - NestJS en el host: `MONGODB_URI` con `localhost:27017` (definida en `.env`).
 - NestJS como contenedor: Compose construye la URI con hostname `mongo:27017` y `MONGO_ROOT_PASSWORD_URLENCODED`.
-- No ejecutar el perfil `app` hasta que existan `apps/api`, `apps/web`, `apps/omr` y sus Dockerfiles (DT-01 en [`docs/dependencias-transversales.md`](docs/dependencias-transversales.md)).
+- El perfil `app` construye `backend` (`apps/backend`) y `frontend` (`apps/frontend`). `omr` (`apps/omr`) aún no existe: nombrar los servicios al arrancar (ver §5.1 y DT-01 en [`docs/dependencias-transversales.md`](docs/dependencias-transversales.md)).
+
+### 5.1 Backend y frontend
+Cada app es una carpeta independiente con su propio `package.json` y `pnpm-lock.yaml` (pnpm mediante corepack: `corepack enable`).
+
+```powershell
+# En el host (desde apps/backend o apps/frontend)
+pnpm install --frozen-lockfile
+pnpm lint; pnpm typecheck; pnpm test; pnpm build    # backend: también pnpm test:e2e
+pnpm start:dev                                      # backend en http://localhost:3000/api/v1/health
+pnpm dev                                            # frontend en http://localhost:5173
+
+# Con Docker (desde la raíz; mongo y redis arrancan como dependencias)
+docker compose --profile app up -d --build backend frontend
+docker compose ps                                   # backend debe quedar "healthy"
+```
+No usar `docker compose --profile app up` sin nombrar los servicios: `omr` aún no tiene carpeta y su build falla.
 
 ## 6. Apagar, sin borrar datos
 ```powershell

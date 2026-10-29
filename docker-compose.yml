@@ -33,10 +33,10 @@ services:
       retries: 10
       start_period: 5s
     networks: [omr]
-  api:
+  backend:
     profiles: ["app"]
     build:
-      context: ./apps/api
+      context: ./apps/backend
     env_file: .env
     environment:
       MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD_URLENCODED:?definir MONGO_ROOT_PASSWORD_URLENCODED en .env}@mongo:27017/${MONGO_DB}?authSource=admin
@@ -47,6 +47,12 @@ services:
       redis:
         condition: service_started
     ports: ["127.0.0.1:3000:3000"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks: [omr]
   omr:
     profiles: ["app"]
@@ -60,13 +66,13 @@ services:
         condition: service_started
     ports: ["127.0.0.1:8000:8000"]
     networks: [omr]
-  web:
+  frontend:
     profiles: ["app"]
     build:
-      context: ./apps/web
+      context: ./apps/frontend
     depends_on:
-      api:
-        condition: service_started
+      backend:
+        condition: service_healthy
     ports: ["127.0.0.1:5173:5173"]
     networks: [omr]
 networks:

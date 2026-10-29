@@ -20,13 +20,16 @@ Presentación resumida para la reunión de arranque: [`docs/presentacion-equipo.
 ├── CLAUDE.md                   # Reglas obligatorias para Claude Code
 ├── CONTRIBUTING.md             # Resumen de contribución
 ├── README_SETUP.md             # Instalación rápida
-├── docker-compose.yml          # mongo + redis (base); api/omr/web (perfil app)
+├── docker-compose.yml          # mongo + redis (base); backend/frontend/omr (perfil app)
 ├── .env.docker.example         # Plantilla de variables (sin secretos)
 ├── .claude/
 │   ├── settings.json           # Permisos compartidos de Claude Code
 │   └── skills/                 # sdd-spec (genera spec+plan+tasks), sdd-plan, sdd-tasks, sdd-implement, sdd-release + transversales
 ├── .github/
 │   └── pull_request_template.md
+├── apps/
+│   ├── backend/                # NestJS (esqueleto: health check, lint, typecheck, Jest)
+│   └── frontend/               # React + Vite (esqueleto: lint, typecheck, Vitest)
 ├── docker/templates/           # Dockerfiles de ejemplo para apps/*
 ├── docs/
 │   ├── onboarding/             # Esta guía (00-primeros-pasos … 05-skills)
@@ -44,4 +47,4 @@ Presentación resumida para la reunión de arranque: [`docs/presentacion-equipo.
     ├── roadmap.md
     └── HU-EVAL-001/            # Borrador (draft): spec.md + tasks.md preliminar, falta plan.md
 ```
-`apps/api`, `apps/web` y `apps/omr` aún no existen; su creación es una decisión transversal pendiente.
+`apps/backend` y `apps/frontend` contienen los esqueletos creados por HT-CORE-01. `apps/omr` aún no existe (OMR-001..003).

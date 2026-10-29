@@ -4,7 +4,7 @@ Decisiones que afectan a varias historias. **Ninguna está implementada**; cada 
 
 | ID | Tema | Bloquea | Estado |
 |---|---|---|---|
-| DT-01 | Creación de apps | Todas | Pendiente |
+| DT-01 | Creación de apps | Todas | Parcial (backend y frontend, HT-CORE-01) |
 | DT-02 | Replica set MongoDB | HU-EVAL-001 (outbox/evento), cualquier HU con transacciones | Pendiente |
 | DT-03 | GridFS | HU-EVAL-001, OMR-001..003 | Propuesta |
 | DT-04 | Autenticación y RBAC | HU-EVAL-001 y toda HU con roles | Pendiente |
@@ -16,11 +16,11 @@ Decisiones que afectan a varias historias. **Ninguna está implementada**; cada 
 
 ---
 
-## DT-01 — Creación de `apps/api`, `apps/web`, `apps/omr`
-- **Situación:** Compose define `api`, `omr`, `web` (perfil `app`) con contexto `./apps/*`, que no existe. Hay plantillas en `docker/templates/`.
-- **A decidir:** monorepo con pnpm workspaces o carpetas independientes; gestor de paquetes (las plantillas usan pnpm); versión de Node (22) y Python (3.12); estructura de módulos NestJS; ¿paquete compartido de tipos/contratos?
+## DT-01 — Creación de `apps/backend`, `apps/frontend`, `apps/omr`
+- **Situación (2026-10-28):** estructura decidida por el responsable de HT-CORE-01: `apps/backend` (NestJS), `apps/frontend` (React + Vite) y `apps/omr` (FastAPI). Compose define `backend`, `frontend` y `omr` en el perfil `app`. Los esqueletos de `apps/backend` y `apps/frontend` se crean en HT-CORE-01 (Fase 0B, carpetas independientes con su propio lockfile, DEC-13). `apps/omr` se crea con OMR-001..003. Plantillas en `docker/templates/{backend,frontend,omr}.Dockerfile.example`.
+- **A decidir:** ~~estructura de carpetas~~ (resuelta); monorepo con pnpm workspaces o carpetas independientes (propuesta: independientes, HT-CORE-01 DEC-13); gestor de paquetes (las plantillas usan pnpm); versión de Node (22) y Python (3.12); estructura de módulos NestJS; ¿paquete compartido de tipos/contratos?
 - **Entregable:** spec técnica (ej. `specs/TEC-001`) con esqueletos vacíos, lint, typecheck y healthchecks. Sin código de negocio.
-- **Estructura verificada (HT-CORE-01, 2026-10-10):** `apps/api`, `apps/web` y `apps/omr` **no existen**; no se creó scaffolding. Solo existen las plantillas `docker/templates/{api,web,omr}.Dockerfile.example` (Node 22 + pnpm, Python 3.12).
+- **Histórico — estructura verificada (HT-CORE-01, 2026-10-10, antes de DEC-12):** `apps/api`, `apps/web` y `apps/omr` **no existen**; no se creó scaffolding. Solo existen las plantillas `docker/templates/{api,web,omr}.Dockerfile.example` (Node 22 + pnpm, Python 3.12).
 - **Convenciones de frontend pendientes** (registradas por HT-CORE-01, a decidir por el equipo):
 
   | Convención | Pregunta abierta | DT |

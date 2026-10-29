@@ -19,9 +19,9 @@ Qué se construye, en qué componentes y cuál es el enfoque general (3–6 lín
 ### 2.1 Componentes afectados
 | Componente | Ruta | Cambio |
 |---|---|---|
-| API NestJS | `apps/api/src/<modulo>/` | |
-| Worker BullMQ | `apps/api/src/<modulo>/workers/` | |
-| Frontend React | `apps/web/src/<feature>/` | |
+| API NestJS | `apps/backend/src/<modulo>/` | |
+| Worker BullMQ | `apps/backend/src/<modulo>/workers/` | |
+| Frontend React | `apps/frontend/src/<feature>/` | |
 | Motor OMR | `apps/omr/app/` | |
 
 ### 2.2 Flujo técnico
