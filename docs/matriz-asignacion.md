@@ -10,7 +10,8 @@ Fecha: 2026-10-09 · Fuente: `specs/roadmap.md` y `specs/HU-EVAL-001/spec.md`.
 
 | ID | Módulo | Título | Prioridad | Dependencias | Complejidad estimada | Responsable | Estado | Spec |
 |---|---|---|---|---|---|---|---|---|
-| HT-CORE-01 | Transversal | Base técnica, servicios locales y gestión de cuentas (RBAC) | Sin definir | Docker Desktop/WSL; archivos de setup · Bloque B: DT-01, DT-04, DT-05, DT-07 · Habilita a todas las HU | Sin definir | JulianD27-ia (Bloque A iniciado por Diego Alejandro Narvaez Meza) | in-progress | [spec](../specs/HT-CORE-01/spec.md) |
+| HT-CORE-01 | Transversal | Base técnica y servicios locales | Sin definir | Docker Desktop/WSL; archivos de setup · Habilita a todas las HU | Sin definir | JulianD27-ia (Bloque A iniciado por Diego Alejandro Narvaez Meza) | in-progress | [spec](../specs/HT-CORE-01/spec.md) |
+| HT-AUTH-01 | Transversal | Registro, verificación, acceso y recuperación de cuenta (RBAC) | Sin definir | HT-CORE-01 (fusionada, PR #1) · DT-04, DT-05, DT-07 (DT-09 no bloquea esta historia; sí la de aprobación) | Sin definir | JulianD27-ia | draft | [spec](../specs/HT-AUTH-01/spec.md) |
 | HU-EVAL-001 | Evaluación | Asociación automática de respuestas | Sin definir | Funcionales (según spec): estudiantes inscritos, exámenes, formas, roles DOCENTE/ADMIN · Técnicas: DT-01, DT-02, DT-03, DT-04, DT-05, DT-06, DT-07 | Sin definir | Sin asignar | draft (pendiente de revisión) | [spec](../specs/HU-EVAL-001/spec.md) |
 | HU-EVAL-002 | Evaluación | Claves de respuesta versionadas | Sin definir | Funcionales: requiere documento fuente · Técnicas: DT-01, DT-04, DT-05, DT-07 | Sin definir | Sin asignar | pending spec | — |
 | HU-EVAL-003 | Evaluación | Comparación automática con claves | Sin definir | Funcionales: requiere documento fuente · Técnicas: DT-01, DT-05, DT-07 | Sin definir | Sin asignar | pending spec | — |
@@ -29,7 +30,7 @@ Fecha: 2026-10-09 · Fuente: `specs/roadmap.md` y `specs/HU-EVAL-001/spec.md`.
 | DT-01 | Creación de `apps/backend`, `apps/frontend`, `apps/omr` | HT-CORE-01 (backend y frontend) | Parcial |
 | DT-02 | Replica set de MongoDB | Sin asignar | Pendiente |
 | DT-03 | GridFS para archivos | Sin asignar | Propuesta |
-| DT-04 | Autenticación y RBAC | Sin asignar | Pendiente |
+| DT-04 | Autenticación y RBAC | HT-AUTH-01 (propuestas en su plan §14) | Pendiente |
 | DT-05 | Estrategia de pruebas e integración MongoDB | Sin asignar | Pendiente |
 | DT-06 | Colas Redis + BullMQ (convenciones) | Sin asignar | Pendiente |
 | DT-07 | Herramienta de migraciones MongoDB | Sin asignar | Pendiente |

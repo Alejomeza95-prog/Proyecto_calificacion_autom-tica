@@ -7,7 +7,7 @@ Decisiones que afectan a varias historias. **Ninguna está implementada**; cada 
 | DT-01 | Creación de apps | Todas | Parcial (backend y frontend, HT-CORE-01) |
 | DT-02 | Replica set MongoDB | HU-EVAL-001 (outbox/evento), cualquier HU con transacciones | Pendiente |
 | DT-03 | GridFS | HU-EVAL-001, OMR-001..003 | Propuesta |
-| DT-04 | Autenticación y RBAC | HU-EVAL-001 y toda HU con roles | Pendiente |
+| DT-04 | Autenticación y RBAC | HT-AUTH-01 (la materializa), HU-EVAL-001 y toda HU con roles | Pendiente (propuesta en HT-AUTH-01) |
 | DT-05 | Estrategia de pruebas | Todas | Pendiente |
 | DT-06 | Redis + BullMQ | HU-EVAL-001, OMR-002 | Pendiente |
 | DT-07 | Migraciones MongoDB | Toda HU con persistencia | Pendiente |
@@ -43,7 +43,7 @@ Decisiones que afectan a varias historias. **Ninguna está implementada**; cada 
 - **A decidir:** buckets (ej. `cargas`, `hojas_omr`), metadatos obligatorios (SHA-256, MIME, tamaño, usuario, documento dueño), límite de tamaño, retención y borrado, alternativa si se descarta.
 
 ## DT-04 — Autenticación y RBAC
-- **Situación:** la arquitectura indica JWT/OIDC + RBAC; HU-EVAL-001 usa roles DOCENTE y ADMIN. No hay historia de autenticación en el roadmap.
+- **Situación:** la arquitectura indica JWT/OIDC + RBAC; HU-EVAL-001 usa roles DOCENTE y ADMIN. La historia que la materializa es HT-AUTH-01 (2026-11-02; propuestas en su plan §14: sesiones, primer administrador, catálogo de roles).
 - **A decidir:** proveedor (JWT propio vs. OIDC externo), catálogo de roles y permisos, colección de usuarios, auditoría. Confirmar con el backlog si existe una historia para esto.
 
 ## DT-05 — Estrategia de pruebas
