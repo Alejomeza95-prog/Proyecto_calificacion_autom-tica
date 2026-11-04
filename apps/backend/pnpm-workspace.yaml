@@ -1,6 +1,8 @@
 # Configuración de pnpm para esta app (carpeta independiente, HT-CORE-01 DEC-13).
-# Scripts de build de dependencias: denegados. Ambos paquetes traen binarios precompilados;
+# Scripts de build de dependencias: denegados. Estos paquetes traen binarios precompilados;
 # su script solo es un respaldo para compilar o descargar el binario.
+# argon2 (HT-AUTH-01 DEC-02): incluye prebuilds N-API para linux-x64 (Alpine/musl) y win32-x64.
 allowBuilds:
   '@parcel/watcher': false
+  argon2: false
   unrs-resolver: false
