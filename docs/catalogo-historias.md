@@ -5,7 +5,8 @@ Construido **solo** con lo que existe en el repositorio (2026-10-09): `specs/roa
 ## Resumen
 | ID | Módulo | Título (del roadmap) | Spec | Criterios documentados | Fuente disponible |
 |---|---|---|---|---|---|
-| HT-CORE-01 | Transversal | Base técnica, servicios locales y gestión de cuentas (RBAC) | [in-progress](../specs/HT-CORE-01/spec.md) | CA-01..CA-20 | [`requisitos/historias/HT-CORE-01.md`](requisitos/historias/HT-CORE-01.md) |
+| HT-CORE-01 | Transversal | Base técnica y servicios locales | [in-progress](../specs/HT-CORE-01/spec.md) | CA-01..CA-08, CA-21 | [`requisitos/historias/HT-CORE-01.md`](requisitos/historias/HT-CORE-01.md) |
+| HT-AUTH-01 | Transversal | Registro, verificación, acceso y recuperación de cuenta (RBAC) | [draft](../specs/HT-AUTH-01/spec.md) | CA-01..CA-12 | [`requisitos/historias/HT-AUTH-01.md`](requisitos/historias/HT-AUTH-01.md) |
 | HU-EVAL-001 | Evaluación | Asociación automática de respuestas | [draft](../specs/HU-EVAL-001/spec.md) | CA-01..CA-05 (iniciales) | Spec borrador; backlog citado no disponible |
 | HU-EVAL-002 | Evaluación | Claves de respuesta versionadas | — | Ninguno | Solo título |
 | HU-EVAL-003 | Evaluación | Comparación automática con claves | — | Ninguno | Solo título |
