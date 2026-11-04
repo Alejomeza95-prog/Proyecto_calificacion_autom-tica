@@ -42,7 +42,7 @@ export interface AuthCoreHarness {
   close(): Promise<void>;
 }
 
-function isolatedMongoUri(dbName: string): string {
+export function isolatedMongoUri(dbName: string): string {
   const url = new URL(requireEnv('MONGODB_URI'));
   url.pathname = `/${dbName}`;
   return url.toString();

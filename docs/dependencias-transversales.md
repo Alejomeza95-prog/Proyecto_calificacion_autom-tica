@@ -4,7 +4,7 @@ Decisiones que afectan a varias historias. Las decisiones de cada historia se ci
 
 | ID | Tema | Bloquea | Estado |
 |---|---|---|---|
-| DT-01 | Creación de apps | Todas | Parcial (backend y frontend, HT-CORE-01) |
+| DT-01 | Creación de apps | Todas | Parcial (backend y frontend, HT-CORE-01; validación de DTO del backend: `HT-AUTH-01/DEC-21`, aprobada el 2026-11-04) |
 | DT-02 | Replica set MongoDB | HU-EVAL-001 (outbox/evento), cualquier HU con transacciones | Pendiente |
 | DT-03 | GridFS | HU-EVAL-001, OMR-001..003 | Propuesta |
 | DT-04 | Autenticación y RBAC | HT-AUTH-01 (la materializa), HU-EVAL-001 y toda HU con roles | **Resuelta para HT-AUTH-01** (2026-11-03): decisiones de negocio (`HT-AUTH-01/DEC-07`, `DEC-11`, `DEC-14`) y técnicas (`DEC-01`, `DEC-02`, `DEC-03`, `DEC-06`, `DEC-08`, `DEC-10`, `DEC-15`, `DEC-16`, `DEC-17`) aprobadas. Pendientes antes del release de HT-AUTH-01: proveedor de CAPTCHA y valores de producción de `DEC-15`/`DEC-17` |
@@ -19,6 +19,7 @@ Decisiones que afectan a varias historias. Las decisiones de cada historia se ci
 ## DT-01 — Creación de `apps/backend`, `apps/frontend`, `apps/omr`
 - **Situación (2026-10-28):** estructura decidida por el responsable de HT-CORE-01: `apps/backend` (NestJS), `apps/frontend` (React + Vite) y `apps/omr` (FastAPI). Compose define `backend`, `frontend` y `omr` en el perfil `app`. Los esqueletos de `apps/backend` y `apps/frontend` se crean en HT-CORE-01 (Fase 0B, carpetas independientes con su propio lockfile, `HT-CORE-01/DEC-13`). `apps/omr` se crea con OMR-001..003. Plantillas en `docker/templates/{backend,frontend,omr}.Dockerfile.example`.
 - **A decidir:** ~~estructura de carpetas~~ (resuelta); monorepo con pnpm workspaces o carpetas independientes (propuesta: independientes, `HT-CORE-01/DEC-13`); gestor de paquetes (las plantillas usan pnpm); versión de Node (22) y Python (3.12); estructura de módulos NestJS; ¿paquete compartido de tipos/contratos?
+- **Validación de DTO en el backend — `HT-AUTH-01/DEC-21`, aprobada por el desarrollador responsable el 2026-11-04:** `class-validator` + `class-transformer` con `ValidationPipe` **global** con `transform: true`, `whitelist: true`, `forbidNonWhitelisted: true` y `forbidUnknownValues: true`; `validationError: { target: false, value: false }` (los errores no exponen el objeto ni el valor recibido); `transformOptions.enableImplicitConversion: false` (sin conversiones implícitas indiscriminadas; cualquier conversión se declara con `@Type`/`@Transform` en la propiedad); DTO como **clases concretas** con validaciones explícitas en **cada** propiedad (`class-validator`); errores de validación traducidos al formato `application/problem+json` del proyecto. Las demás historias del backend adoptan la misma configuración. Siguen abiertos el paquete compartido de tipos y los workspaces.
 - **Entregable:** spec técnica (ej. `specs/TEC-001`) con esqueletos vacíos, lint, typecheck y healthchecks. Sin código de negocio.
 - **Histórico — estructura verificada (HT-CORE-01, 2026-10-10, antes de `HT-CORE-01/DEC-12`):** `apps/api`, `apps/web` y `apps/omr` **no existen**; no se creó scaffolding. Solo existen las plantillas `docker/templates/{api,web,omr}.Dockerfile.example` (Node 22 + pnpm, Python 3.12).
 - **Convenciones de frontend pendientes** (registradas por HT-CORE-01, a decidir por el equipo):

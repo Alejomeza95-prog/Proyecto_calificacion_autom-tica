@@ -37,6 +37,11 @@ export class UsersService {
     return this.usuarios.findById(id).exec();
   }
 
+  /** Registra el último inicio de sesión correcto. No toca estado, rol ni credenciales. */
+  async touchLastAccess(id: Types.ObjectId): Promise<void> {
+    await this.usuarios.updateOne({ _id: id }, { $set: { ultimo_acceso_en: this.clock.now() } }).exec();
+  }
+
   /**
    * Cambia el estado de forma atómica si la cuenta sigue en `from`.
    * - Rechaza transiciones no permitidas (RN-01).
