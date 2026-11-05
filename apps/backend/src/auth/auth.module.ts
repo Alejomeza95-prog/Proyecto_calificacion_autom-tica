@@ -6,6 +6,8 @@ import { JwtAuthGuard, OriginGuard, RolesGuard } from '../authz/guards';
 import { InstitutionScopePolicy } from '../authz/institution-scope.policy';
 import { ProblemJsonFilter } from '../common/http/problem-json.filter';
 import { createValidationPipe } from '../common/http/validation';
+import { INVITATION_RESOLVER, NoInvitationResolver } from '../invitations/invitation-resolver';
+import { AuthAccountService } from './auth-account.service';
 import { AuthCoreModule } from './auth-core.module';
 import { AuthSessionService } from './auth-session.service';
 import { AuthController } from './auth.controller';
@@ -22,6 +24,8 @@ import { AuthController } from './auth.controller';
   providers: [
     AccessTokenService,
     AuthSessionService,
+    AuthAccountService,
+    { provide: INVITATION_RESOLVER, useFactory: () => new NoInvitationResolver() },
     InstitutionScopePolicy,
     { provide: APP_GUARD, useClass: OriginGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },

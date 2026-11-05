@@ -3,6 +3,7 @@ import type { Types } from 'mongoose';
 import { AuditService } from '../audit/audit.service';
 import { AUTH_CONFIG } from '../config/config.module';
 import type { AuthConfig } from '../config/auth-config';
+import { AuthMetrics } from '../observability/auth-metrics';
 import { MAIL_SENDER, type MailMessage, type MailSender } from './mail-sender';
 import type { MailTemplate } from './mail-templates';
 
@@ -30,6 +31,7 @@ export class MailDispatcher implements BeforeApplicationShutdown {
     @Inject(MAIL_SENDER) private readonly sender: MailSender,
     private readonly audit: AuditService,
     @Inject(AUTH_CONFIG) private readonly config: Pick<AuthConfig, 'mailDrainTimeoutMs'>,
+    private readonly metrics: AuthMetrics,
   ) {}
 
   get pendingCount(): number {
@@ -40,22 +42,51 @@ export class MailDispatcher implements BeforeApplicationShutdown {
   dispatch(job: MailJob): boolean {
     if (!this.accepting) {
       this.logger.warn(`Envío descartado durante el apagado (plantilla ${job.template})`);
+      this.metrics.recordMail('descartado');
       return false;
     }
-    const task = new Promise<void>((resolve) => setImmediate(resolve))
-      .then(() => this.send(job))
+    const task: Promise<void> = new Promise<void>((resolve) => setImmediate(resolve))
+      .then(async () => {
+        await this.send(job);
+      })
       .finally(() => this.pending.delete(task));
     this.pending.add(task);
     return true;
   }
 
-  private async send(job: MailJob): Promise<void> {
+  /**
+   * Envía **ahora** y espera el resultado (T-35): solo para el comando `bootstrap:admin`, que no responde
+   * a ninguna solicitud HTTP y debe informar a quien opera si el envío falló (mensaje genérico, DEC-08).
+   * Mismo registro y auditoría que `dispatch`; el envío cuenta como pendiente para el drenaje.
+   */
+  async deliver(job: MailJob): Promise<boolean> {
+    if (!this.accepting) {
+      this.logger.warn(`Envío descartado durante el apagado (plantilla ${job.template})`);
+      this.metrics.recordMail('descartado');
+      return false;
+    }
+    let ok = false;
+    const task = this.send(job)
+      .then((sent) => {
+        ok = sent;
+      })
+      .finally(() => this.pending.delete(task));
+    this.pending.add(task);
+    await task;
+    return ok;
+  }
+
+  private async send(job: MailJob): Promise<boolean> {
     try {
       await this.sender.send(job.message);
       this.logger.log(`Correo enviado (plantilla ${job.template})`);
+      this.metrics.recordMail('enviado');
+      return true;
     } catch {
       this.logger.error(`Correo no enviado (plantilla ${job.template})`);
+      this.metrics.recordMail('fallido');
       await this.audit.recordSafely({ evento: 'CORREO_NO_ENVIADO', resultado: 'RECHAZADO', usuarioId: job.usuarioId });
+      return false;
     }
   }
 

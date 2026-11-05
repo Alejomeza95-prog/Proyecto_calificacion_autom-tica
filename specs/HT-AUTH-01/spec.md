@@ -41,7 +41,8 @@ Objetivo técnico: implementar el ciclo de vida de la cuenta **antes** de expone
 - Estados de cuenta y control de acceso a rutas privadas según rol, institución y alcance del recurso (RBAC en backend).
 - Correos de verificación, reenvío, restablecimiento y aviso de cambio de contraseña.
 - Limitación de intentos, respuestas genéricas y auditoría de eventos de seguridad.
-- Pantallas: Registro, Revisa tu correo, Verificar correo, Reenviar verificación, Login, Olvidé mi contraseña y Crear nueva contraseña, más la protección de la navegación privada.
+- ~~Pantallas: Registro, Revisa tu correo, Verificar correo, Reenviar verificación, Login, Olvidé mi contraseña y Crear nueva contraseña, más la protección de la navegación privada.~~ (trasladado a la historia posterior de frontend (ID por asignar; DEC-23, aprobada el 2026-11-05))
+- API de autenticación y sus contratos (`/api/v1/auth`, errores `application/problem+json`), que la historia de frontend consumirá.
 - Documentación del proveedor de correo, plantillas, variables de entorno, roles y estados (DoD aportado).
 - Inicialización segura del primer administrador mediante una operación del servidor, sin ruta pública (§6.5).
 - Catálogo mínimo de roles y su alcance por institución (§8), aplicado por el backend.
@@ -53,7 +54,8 @@ Objetivo técnico: implementar el ciclo de vida de la cuenta **antes** de expone
 - Inicio de sesión con proveedores externos (OIDC/SSO), segundo factor y cambio de contraseña desde el perfil con sesión iniciada.
 - Códigos de verificación de correo (numéricos o alfanuméricos): la primera versión solo usa enlaces (DEC-18).
 - Gestión de instituciones.
-- Identidad visual del sistema: paleta, tipografía, tokens de diseño, DESIGN.md y componentes con estilo propio (HU-UX-001). Esta historia define la estructura, los estados, los textos y la accesibilidad de las pantallas de cuenta (§6.4), no su estilo.
+- **Frontend de la cuenta** (historia posterior de frontend (ID por asignar; DEC-23, aprobada el 2026-11-05)): las 7 pantallas y su brief (§6.4), la protección de la navegación privada, el cliente API y el estado de sesión en el navegador, la coordinación de renovaciones entre pestañas, el widget de CAPTCHA y las pruebas Playwright y de accesibilidad. Esta historia deja la API lista y documentada para esa historia.
+- Identidad visual del sistema: paleta, tipografía, tokens de diseño, DESIGN.md y componentes con estilo propio (HU-UX-001). ~~Esta historia define la estructura, los estados, los textos y la accesibilidad de las pantallas de cuenta (§6.4), no su estilo.~~ La estructura, los estados, los textos y la accesibilidad de las pantallas de cuenta quedan en §6.4 como insumo de la historia posterior de frontend (ID por asignar) (DEC-23, aprobada el 2026-11-05); HT-AUTH-01 no las implementa.
 
 ### Supuestos
 - HT-CORE-01 (fusionada en `develop`) deja disponibles MongoDB y Redis en local y los esqueletos `apps/backend` y `apps/frontend`.
@@ -108,6 +110,8 @@ Objetivo técnico: implementar el ciclo de vida de la cuenta **antes** de expone
 4. Si el enlace venció o ya se usó, ve un mensaje claro y la opción de pedir uno nuevo.
 
 ### 6.4 Experiencia de las pantallas (brief de la guía `impeccable`: shape, harden y clarify)
+> **Trasladada a la historia posterior de frontend (ID por asignar; DEC-23, aprobada el 2026-11-05).** Se conserva como insumo de esa historia; HT-AUTH-01 no implementa pantallas. Los mensajes genéricos y los códigos de respuesta que esta sección supone sí los garantiza la API.
+
 Brief en modo **Operate** (la persona completa una tarea). **No fija dirección visual:** paleta, tipografía, tokens, DESIGN.md y estilo de componentes son de HU-UX-001. En esta historia las pantallas usan HTML semántico y los estilos mínimos del esqueleto, de modo que HU-UX-001 pueda aplicar su identidad sin cambiar estructura ni comportamiento (tarea T-22). No agrega comportamiento de negocio.
 
 - **Trabajo y público:** docentes y administradores de una academia PreICFES (PRODUCT.md) que entran desde el escritorio de la oficina o desde el celular, a menudo justo antes de procesar un lote. Quieren entrar rápido y sin dudas; no exploran.
@@ -236,6 +240,7 @@ Ningún usuario puede asignarse Admin o Coordinador, ni acceder a datos de otra 
 **Y** abrir el enlace no consume el token: se consume una sola vez, de forma atómica, cuando la persona confirma la verificación.
 **Y** un token vencido, ya usado o reemplazado por uno más reciente es rechazado.
 **Y** el token no aparece en los logs ni se expone a recursos externos de la página.
+**Nota (DEC-23, aprobada el 2026-11-05):** en esta historia se verifica la parte de la API (solo enlace con el token en el fragmento, ninguna ruta `GET` consume tokens, confirmación por `POST`); que la página no exponga el token a recursos externos lo verifica la historia de frontend.
 
 ### CA-05 — Acceso solo para cuentas habilitadas (CA-AUTH-05)
 **Dado** una cuenta con el correo sin verificar o en un estado distinto de ACTIVA
@@ -308,6 +313,7 @@ Ningún usuario puede asignarse Admin o Coordinador, ni acceder a datos de otra 
 **Y** la sesión no dura más de 7 días desde el inicio de sesión, aunque se renueve, ni admite más renovaciones que el máximo configurado (valor inicial propuesto: 1.000); al alcanzarlo, la sesión se cierra y se pide iniciar sesión de nuevo.
 **Y** si dos renovaciones de la misma credencial llegan a la vez, como máximo una tiene éxito y nunca quedan dos credenciales de renovación válidas para la misma sesión.
 **Y** con la sesión abierta en varias pestañas del mismo navegador, las renovaciones se coordinan entre ellas para que el uso normal no cierre la sesión.
+**Nota (DEC-23, aprobada el 2026-11-05):** la coordinación entre pestañas es del cliente y la verifica la historia de frontend; esta historia garantiza la rotación atómica y la detección de reutilización del servidor, que no se relajan.
 **Y** al restablecer la contraseña se cierran todas las sesiones existentes, incluidas sus renovaciones.
 
 ### CA-16 — Verificación adicional en el inicio de sesión (DEC-16, aprobada por el responsable del proyecto el 2026-11-03; proveedor pendiente antes del release)
@@ -320,10 +326,10 @@ Ningún usuario puede asignarse Admin o Coordinador, ni acceder a datos de otra 
 
 ## 11. Requisitos no funcionales
 - **RNF-01:** hash adaptativo aprobado: Argon2id o un equivalente aprobado.
-- **RNF-02:** política de contraseña propuesta: mínimo 12 caracteres, con soporte para frases de contraseña y gestores. Se permite pegar. No se imponen reglas arbitrarias de composición salvo que lo exija la política institucional.
+- **RNF-02:** política de contraseña propuesta: mínimo 12 caracteres, con soporte para frases de contraseña y gestores. Se permite pegar. No se imponen reglas arbitrarias de composición salvo que lo exija la política institucional. *(DEC-23, aprobada el 2026-11-05: esta historia verifica la política en la API; pegar y autocompletar en los formularios lo verifica la historia de frontend.)*
 - **RNF-03:** HTTPS en todos los despliegues.
 - **RNF-04:** todos los vencimientos y límites son configurables, sin valores fijos en el código, y una configuración inválida o incompleta impide arrancar. Valores iniciales propuestos (DEC-15, §6.6): verificación de correo 24 h, recuperación de contraseña 30 min, credencial de acceso 15 min y sesión renovable 7 días.
-- **RNF-05:** las pantallas de cuenta tienen estados de carga y error accesibles (anuncio de cambios, gestión del foco y uso con teclado).
+- **RNF-05:** las pantallas de cuenta tienen estados de carga y error accesibles (anuncio de cambios, gestión del foco y uso con teclado). *(DEC-23, aprobada el 2026-11-05: lo cubre la historia posterior de frontend, ID por asignar; HT-AUTH-01 no tiene tareas para RNF-05.)*
 - **RNF-06:** si se eligen cookies, hay protección contra CSRF; si se eligen tokens, su almacenamiento, expiración y revocación son seguros y están documentados. **Concreción (DEC-01 y DEC-20, aprobadas):** las operaciones de autenticación que cambian estado y las protegidas por la cookie de sesión solo se aceptan desde los orígenes del frontend configurados explícitamente; una solicitud sin origen, con origen `null` o con un origen no autorizado se rechaza con «acceso denegado» (403), sin efectos.
 - **RNF-07** *(DEC-17, aprobada por el responsable del proyecto el 2026-11-03; valores de producción pendientes de las pruebas de carga, T-43)*: el servicio de autenticación limita la cantidad total de solicitudes de autenticación y la cantidad de verificaciones de contraseña simultáneas, para que una ráfaga de solicitudes no agote el procesador ni la memoria. Distingue dos respuestas: «demasiados intentos» cuando el límite es atribuible a quien hace la solicitud (su IP, su correo o su enlace), y «servicio no disponible, reintenta más tarde» cuando el servicio está saturado o le falta capacidad. Los valores se definen con pruebas de carga y concurrencia; **no hay valores de producción sin esas pruebas**.
 
@@ -380,3 +386,6 @@ Equivalencia con el Bloque B de HT-CORE-01 (2026-10-22 a 2026-11-02): CA-NN = CA
 | 2026-11-03 | Revisión de cierre documental: §13 marca los puntos verificados (RN numeradas, CA verificables, requisitos respaldados). **No pasa a `ready`:** siguen abiertas la elegibilidad de «Olvidé mi contraseña» y el método de verificación (enlace, código o ambos), que cambian el comportamiento de CA-08 y CA-04 | Revisión pedida por el responsable del proyecto |
 | 2026-11-03 | **Decisiones del responsable del proyecto para cerrar los bloqueos documentales.** DEC-18: verificación solo por enlace (sin códigos), token de 256 bits Base64URL, 24 h, hash SHA-256, consumo atómico de un solo uso, abrir el enlace no lo consume y la confirmación es por POST; §3 (alcance y fuera de alcance), RN-06, §6.1, tabla de pantallas y CA-04. DEC-19: recuperación solo para ACTIVA y PENDIENTE_APROBACION, sin cambiar estado, rol ni institución; **RN-19 nueva**, §6.3, CA-08 y CA-09. DEC-20: validación estricta de `Origin` con lista explícita; RNF-06. Supuesto de correo de prueba actualizado (DEC-05). §12: tres preguntas cerradas; §13 completa | Responsable del proyecto |
 | 2026-11-03 | **draft → ready**, autorizado por el responsable del proyecto tras la revisión de los checklists (§13 completo; trazabilidad validada) | Responsable del proyecto |
+| 2026-11-05 | **Propuesta DEC-23** (plan §14), pendiente de aprobación: HT-AUTH-01 queda **solo backend**. El frontend de la cuenta (pantallas de §6.4, navegación privada, cliente y sesión del navegador, coordinación entre pestañas, widget de CAPTCHA, pruebas Playwright y de accesibilidad) pasa a una historia posterior de frontend sin ID asignado. §3: la viñeta de pantallas se tacha y el frontend pasa a «Fuera de alcance»; §6.4 se conserva como insumo; notas en CA-04, CA-15, RNF-02 y RNF-05 sobre la parte que verifica cada historia. Ningún CA, RN ni RNF cambia de número ni se retira. | Instrucción del responsable (2026-11-05) |
+| 2026-11-05 | **DEC-23 aprobada** por el responsable del proyecto (decisión de alcance, alternativa B): el frontend de la cuenta se desarrollará en una historia posterior e independiente (ID por asignar). Las notas de §3, §6.4, CA-04, CA-15, RNF-02 y RNF-05 pasan de «propuesta» a «aprobada». Ningún CA, RN ni RNF se elimina ni se renumera. Estado: `in-progress` (sin cambio, por instrucción del responsable). | Decisión del responsable (2026-11-05) |
+| 2026-11-05 | Ajuste de alcance tras DEC-23: §3 (fuera de alcance, identidad visual) deja de atribuir a esta historia la estructura, los estados, los textos y la accesibilidad de las pantallas; quedan en §6.4 como insumo de la historia posterior de frontend. Sin cambios en CA, RN ni RNF. Estado: `in-progress` (sin cambio). | Revisión del responsable (2026-11-05) |

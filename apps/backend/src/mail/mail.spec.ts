@@ -1,6 +1,7 @@
 import type { AuditService } from '../audit/audit.service';
 import { withMinimumDuration } from '../common/min-duration';
 import { LinkBuilder } from './link-builder';
+import { AuthMetrics } from '../observability/auth-metrics';
 import { MailDispatcher } from './mail-dispatcher';
 import { InMemoryMailSender, type MailMessage, type MailSender } from './mail-sender';
 import { MailService } from './mail.service';
@@ -13,7 +14,7 @@ const ttl = { jwtAccessMs: 1, sessionRefreshMs: 1, verifyTokenMs: 86_400_000, re
 function setup(sender: MailSender = new InMemoryMailSender(), drainMs = 2_000) {
   const record = jest.fn<Promise<void>, [unknown]>(() => Promise.resolve());
   const audit = { recordSafely: record } as unknown as AuditService;
-  const dispatcher = new MailDispatcher(sender, audit, { mailDrainTimeoutMs: drainMs });
+  const dispatcher = new MailDispatcher(sender, audit, { mailDrainTimeoutMs: drainMs }, new AuthMetrics());
   const service = new MailService(new LinkBuilder({ appPublicUrl: 'http://localhost:5173' }), dispatcher, { ttl });
   return { dispatcher, service, record };
 }
@@ -72,6 +73,26 @@ describe('MailService y MailDispatcher (T-12)', () => {
     expect(record).toHaveBeenCalledWith({ evento: 'CORREO_NO_ENVIADO', resultado: 'RECHAZADO', usuarioId: to.usuarioId });
     expect(JSON.stringify(record.mock.calls)).not.toContain(TOKEN);
     expect(logs.join('\n')).not.toContain(TOKEN);
+  });
+
+  it('T-35: deliverActivation envía ahora y devuelve el resultado; un fallo SMTP → false y CORREO_NO_ENVIADO sin enlace', async () => {
+    const sender = new InMemoryMailSender();
+    const { service, record } = setup(sender);
+    await expect(service.deliverActivation(to, TOKEN)).resolves.toBe(true);
+    expect(sender.sent[0]?.text).toContain(`/activar-cuenta#token=${TOKEN}`);
+    sender.failNext = 1;
+    await expect(service.deliverActivation(to, TOKEN)).resolves.toBe(false);
+    expect(record).toHaveBeenCalledWith({ evento: 'CORREO_NO_ENVIADO', resultado: 'RECHAZADO', usuarioId: to.usuarioId });
+    expect(JSON.stringify(record.mock.calls)).not.toContain(TOKEN);
+    expect(logs.join('\n')).not.toContain(TOKEN);
+  });
+
+  it('T-35: deliverActivation durante el apagado → false sin enviar', async () => {
+    const sender = new InMemoryMailSender();
+    const { dispatcher, service } = setup(sender);
+    await dispatcher.drain();
+    await expect(service.deliverActivation(to, TOKEN)).resolves.toBe(false);
+    expect(sender.sent).toHaveLength(0);
   });
 
   it('SIGTERM con envíos pendientes → se drenan antes del cierre y luego no acepta más', async () => {

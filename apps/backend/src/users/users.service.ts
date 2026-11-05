@@ -1,11 +1,30 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import type { Model, Types } from 'mongoose';
-import { ROLE_SCOPE, ROLES } from '../authz/role';
+import { mongo, type Model, type Types } from 'mongoose';
+import { INSTITUTIONAL_ROLES, Role, ROLE_SCOPE, ROLES } from '../authz/role';
 import { CLOCK, type Clock } from '../common/clock';
-import { AccountStatus, canTransition } from './account-status';
+import type { InvitationAssignment } from '../invitations/invitation-resolver';
+import { AccountStatus, canTransition, PASSWORD_RECOVERY_ELIGIBLE } from './account-status';
 import { normalizeEmail } from './email-normalizer';
-import { Usuario } from './usuario.schema';
+import { AccountOrigin, Usuario } from './usuario.schema';
+
+/** Filtro RN-15: rol del catálogo con la institución que exige su alcance (requisito para ACTIVA). */
+function coherentRoleFilters(): Record<string, unknown>[] {
+  return ROLES.map((rol) =>
+    ROLE_SCOPE[rol] === 'GLOBAL' ? { rol, institucion_id: null } : { rol, institucion_id: { $ne: null } },
+  );
+}
+
+/** E11000 sobre el campo indicado (índice único). */
+export function isDuplicateKey(error: unknown, field: string): boolean {
+  return (
+    error instanceof mongo.MongoServerError &&
+    error.code === 11000 &&
+    typeof error.keyPattern === 'object' &&
+    error.keyPattern !== null &&
+    field in error.keyPattern
+  );
+}
 
 export class InvalidTransitionError extends Error {
   constructor(from: AccountStatus, to: AccountStatus) {
@@ -37,6 +56,153 @@ export class UsersService {
     return this.usuarios.findById(id).exec();
   }
 
+  /**
+   * Crea una cuenta en PENDIENTE_VERIFICACION (CA-01, plan §5). El rol y la institución solo llegan de
+   * una invitación validada en el servidor (`assignment`); sin ella, la cuenta no tiene ninguno (RN-02).
+   * Un E11000 sobre `correo_normalizado` devuelve `null`: el llamador responde igual (CA-02, RN-04).
+   */
+  async register(input: {
+    readonly nombre: string;
+    readonly correoNormalizado: string;
+    readonly passwordHash: string;
+    readonly assignment: InvitationAssignment | null;
+  }): Promise<Types.ObjectId | null> {
+    try {
+      const created = await this.usuarios.create({
+        nombre: input.nombre,
+        correo_normalizado: input.correoNormalizado,
+        password_hash: input.passwordHash,
+        estado: AccountStatus.PENDIENTE_VERIFICACION,
+        rol: input.assignment?.rol ?? null,
+        institucion_id: input.assignment?.institucionId ?? null,
+        origen: input.assignment ? AccountOrigin.INVITACION : AccountOrigin.AUTORREGISTRO,
+        credenciales_actualizadas_en: this.clock.now(),
+      });
+      return created._id;
+    } catch (error) {
+      if (isDuplicateKey(error, 'correo_normalizado')) return null;
+      throw error;
+    }
+  }
+
+  /**
+   * Verificación del correo (plan §5, DEC-07, DEC-18): PENDIENTE_VERIFICACION → PENDIENTE_APROBACION en el
+   * autorregistro; → ACTIVA solo si la cuenta viene de una invitación con rol coherente asignado por el
+   * servidor; nunca con un rol global (RN-14: ninguna ruta pública crea un ADMIN ACTIVO). Las cuentas
+   * BOOTSTRAP se activan solo con `/auth/activate`. Devuelve el estado nuevo o
+   * `null` si la cuenta ya no estaba pendiente de verificación.
+   */
+  async markEmailVerified(id: Types.ObjectId): Promise<AccountStatus | null> {
+    const now = this.clock.now();
+    const invited = await this.usuarios
+      .updateOne(
+        {
+          _id: id,
+          estado: AccountStatus.PENDIENTE_VERIFICACION,
+          origen: AccountOrigin.INVITACION,
+          rol: { $in: INSTITUTIONAL_ROLES },
+          institucion_id: { $ne: null },
+        },
+        { $set: { estado: AccountStatus.ACTIVA, correo_verificado_en: now } },
+      )
+      .exec();
+    if (invited.modifiedCount === 1) return AccountStatus.ACTIVA;
+    const selfRegistered = await this.usuarios
+      .updateOne(
+        {
+          _id: id,
+          estado: AccountStatus.PENDIENTE_VERIFICACION,
+          origen: { $in: [AccountOrigin.AUTORREGISTRO, AccountOrigin.INVITACION] },
+        },
+        { $set: { estado: AccountStatus.PENDIENTE_APROBACION, correo_verificado_en: now } },
+      )
+      .exec();
+    return selfRegistered.modifiedCount === 1 ? AccountStatus.PENDIENTE_APROBACION : null;
+  }
+
+  /**
+   * Restablecimiento (plan §5, DEC-19, RN-19): solo si la cuenta sigue elegible. Cambia **solo**
+   * `password_hash`, `credenciales_actualizadas_en` y `version_credenciales`; nunca estado, rol ni
+   * institución. Devuelve `false` si la cuenta dejó de ser elegible.
+   */
+  async resetPassword(id: Types.ObjectId, passwordHash: string): Promise<boolean> {
+    const result = await this.usuarios
+      .updateOne(
+        { _id: id, estado: { $in: PASSWORD_RECOVERY_ELIGIBLE } },
+        { $set: { password_hash: passwordHash, credenciales_actualizadas_en: this.clock.now() }, $inc: { version_credenciales: 1 } },
+      )
+      .exec();
+    return result.modifiedCount === 1;
+  }
+
+  /**
+   * Activación del primer administrador (plan §5, CA-13): solo la cuenta BOOTSTRAP pendiente. Define la
+   * contraseña, verifica el correo y la deja ACTIVA; el rol ADMIN ya lo asignó el servidor al crearla.
+   */
+  async activateBootstrap(id: Types.ObjectId, passwordHash: string): Promise<boolean> {
+    const now = this.clock.now();
+    const result = await this.usuarios
+      .updateOne(
+        {
+          _id: id,
+          estado: AccountStatus.PENDIENTE_VERIFICACION,
+          origen: AccountOrigin.BOOTSTRAP,
+          rol: Role.ADMIN,
+          institucion_id: null,
+        },
+        {
+          $set: {
+            password_hash: passwordHash,
+            correo_verificado_en: now,
+            estado: AccountStatus.ACTIVA,
+            credenciales_actualizadas_en: now,
+          },
+          $inc: { version_credenciales: 1 },
+        },
+      )
+      .exec();
+    return result.modifiedCount === 1;
+  }
+
+  /** Existe algún ADMIN ACTIVO (plan §5, DEC-08: la inicialización se niega). */
+  async hasActiveAdmin(): Promise<boolean> {
+    return (await this.usuarios.exists({ rol: Role.ADMIN, estado: AccountStatus.ACTIVA }).exec()) !== null;
+  }
+
+  /** La cuenta de inicialización, si existe (a lo sumo una: índice único parcial `ux_usuarios_bootstrap`). */
+  findBootstrap() {
+    return this.usuarios.findOne({ origen: AccountOrigin.BOOTSTRAP }).exec();
+  }
+
+  /**
+   * Crea la cuenta de inicialización (plan §5, DEC-08, T-35): ADMIN sin institución, PENDIENTE_VERIFICACION
+   * y con el hash de un valor aleatorio descartado (sin contraseña utilizable). Un E11000 indica otra
+   * cuenta BOOTSTRAP (ejecución simultánea) o un correo ya registrado: no crea nada.
+   */
+  async createBootstrap(input: {
+    readonly nombre: string;
+    readonly correoNormalizado: string;
+    readonly passwordHash: string;
+  }): Promise<Types.ObjectId | 'BOOTSTRAP_DUPLICADO' | 'CORREO_DUPLICADO'> {
+    try {
+      const created = await this.usuarios.create({
+        nombre: input.nombre,
+        correo_normalizado: input.correoNormalizado,
+        password_hash: input.passwordHash,
+        estado: AccountStatus.PENDIENTE_VERIFICACION,
+        rol: Role.ADMIN,
+        institucion_id: null,
+        origen: AccountOrigin.BOOTSTRAP,
+        credenciales_actualizadas_en: this.clock.now(),
+      });
+      return created._id;
+    } catch (error) {
+      if (isDuplicateKey(error, 'correo_normalizado')) return 'CORREO_DUPLICADO';
+      if (isDuplicateKey(error, 'origen')) return 'BOOTSTRAP_DUPLICADO';
+      throw error;
+    }
+  }
+
   /** Registra el último inicio de sesión correcto. No toca estado, rol ni credenciales. */
   async touchLastAccess(id: Types.ObjectId): Promise<void> {
     await this.usuarios.updateOne({ _id: id }, { $set: { ultimo_acceso_en: this.clock.now() } }).exec();
@@ -54,11 +220,7 @@ export class UsersService {
     if (!canTransition(from, to)) throw new InvalidTransitionError(from, to);
 
     const filter: Record<string, unknown> = { _id: id, estado: from };
-    if (to === AccountStatus.ACTIVA) {
-      filter.$or = ROLES.map((rol) =>
-        ROLE_SCOPE[rol] === 'GLOBAL' ? { rol, institucion_id: null } : { rol, institucion_id: { $ne: null } },
-      );
-    }
+    if (to === AccountStatus.ACTIVA) filter.$or = coherentRoleFilters();
     const update: Record<string, unknown> = { $set: { estado: to, actualizado_en: this.clock.now() } };
     if (from === AccountStatus.ACTIVA) update.$inc = { version_credenciales: 1 };
 

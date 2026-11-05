@@ -44,8 +44,13 @@ function config(overrides: Record<string, string> = {}): AuthConfig {
     SMTP_HOST: 'localhost',
     SMTP_PORT: '1025',
     SMTP_SECURE: 'false',
+    SMTP_CONNECTION_TIMEOUT_MS: '1000',
+    SMTP_GREETING_TIMEOUT_MS: '1000',
+    SMTP_SOCKET_TIMEOUT_MS: '1000',
     MAIL_FROM: 'no-responder@example.test',
     MAIL_DRAIN_TIMEOUT_MS: '1000',
+    METRICS_PORT: '0',
+    METRICS_HOST: '127.0.0.1',
     AUDIT_IP_PEPPER: 'a'.repeat(48),
     ...overrides,
   };

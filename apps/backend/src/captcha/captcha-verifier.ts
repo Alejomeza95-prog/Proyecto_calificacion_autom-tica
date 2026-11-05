@@ -1,7 +1,6 @@
 /**
- * Puerto de verificación de CAPTCHA en el servidor (DEC-16, T-41). El adaptador del proveedor real
- * queda pendiente de su selección (bloquea el release); aquí solo existen el puerto y el adaptador de
- * prueba, que la configuración rechaza fuera de local.
+ * Puerto de verificación de CAPTCHA en el servidor (DEC-16, T-41). Adaptadores: Cloudflare Turnstile
+ * (`turnstile-captcha-verifier.ts`, DEC-24) y el de prueba de abajo, que la configuración rechaza fuera de local.
  */
 export interface CaptchaContext {
   /** Acción a la que debe estar ligado el token (DEC-16: `login`). */

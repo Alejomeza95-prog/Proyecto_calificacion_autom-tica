@@ -1,3 +1,4 @@
+import { AuthMetrics } from '../../observability/auth-metrics';
 import { createHmac } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Types } from 'mongoose';
@@ -67,6 +68,7 @@ export class AuthRateLimitService {
     @Inject(CAPTCHA_VERIFIER) private readonly captcha: CaptchaVerifier,
     private readonly audit: AuditService,
     @Inject(AUTH_CONFIG) private readonly config: AuthConfig,
+    private readonly metrics: AuthMetrics,
   ) {}
 
   // --- claves -------------------------------------------------------------
@@ -186,8 +188,11 @@ export class AuthRateLimitService {
       timer = setTimeout(() => reject(new Error('timeout')), this.config.captcha.verifyTimeoutMs);
     });
     try {
-      return await Promise.race([this.captcha.verify(token, { action: 'login', remoteIp: ip }), timeout]);
+      const valid = await Promise.race([this.captcha.verify(token, { action: 'login', remoteIp: ip }), timeout]);
+      this.metrics.recordCaptcha(valid ? 'valido' : 'invalido');
+      return valid;
     } catch {
+      this.metrics.recordCaptcha('no_disponible');
       throw new ServiceUnavailableError('verificacion-no-disponible', this.config.authOverloadRetryAfterS);
     } finally {
       clearTimeout(timer);

@@ -236,7 +236,7 @@ describe('autorización y alcance institucional (T-19, e2e)', () => {
       .filter((fn): fn is object => typeof fn === 'function' && fn !== AuthController)
       .filter((fn) => Reflect.getMetadata(METHOD_METADATA, fn) === RequestMethod.POST)
       .map((fn) => String(Reflect.getMetadata(PATH_METADATA, fn)));
-    expect(postPaths.sort()).toEqual(['login', 'logout', 'refresh']);
+    expect(postPaths.sort()).toEqual(['activate', 'login', 'logout', 'password/forgot', 'password/reset', 'refresh', 'register', 'resend-verification', 'verify-email']);
 
     for (const path of postPaths) {
       for (const origin of [undefined, 'null', 'https://evil.example.test', 'http://localhost:5174', `${ORIGIN}.evil.test`]) {

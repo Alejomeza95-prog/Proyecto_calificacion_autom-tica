@@ -89,6 +89,50 @@ describe('configuración de autenticación (T-11)', () => {
     expect(problemsOf({ ARGON2_MAX_CONCURRENCY: '8', UV_THREADPOOL_SIZE: '4' }).join(' ')).toContain('ARGON2_MAX_CONCURRENCY');
   });
 
+  it('DEC-24: CAPTCHA_PROVIDER=turnstile exige CAPTCHA_SECRET, se admite fuera de local y toma los hostnames de AUTH_ALLOWED_ORIGINS', () => {
+    expect(problemsOf({ CAPTCHA_PROVIDER: 'turnstile', CAPTCHA_SECRET: '' }).join(' ')).toContain('CAPTCHA_SECRET');
+    expect(problemsOf({ CAPTCHA_PROVIDER: 'turnstile', CAPTCHA_SECRET: 'con espacio' }).join(' ')).toContain('CAPTCHA_SECRET');
+    expect(problemsOf({ CAPTCHA_PROVIDER: 'otro', CAPTCHA_SECRET: 'x' }).join(' ')).toContain('CAPTCHA_PROVIDER');
+    const secret = 'secreto-turnstile-0123456789';
+    const production = {
+      NODE_ENV: 'production',
+      SMTP_HOST: 'smtp.example.test',
+      APP_PUBLIC_URL: 'https://app.example.test',
+      AUTH_ALLOWED_ORIGINS: 'https://app.example.test,https://admin.example.test:8443',
+      CAPTCHA_PROVIDER: 'turnstile',
+      CAPTCHA_SECRET: secret,
+    };
+    expect(problemsOf(production)).toEqual([]);
+    const config = loadAuthConfig({ ...base(), ...production });
+    expect(config.captcha).toMatchObject({ provider: 'turnstile', secret, expectedHostnames: ['app.example.test', 'admin.example.test'] });
+    expect(problemsOf({ ...production, CAPTCHA_SECRET: '' }).join(' ')).not.toContain(secret);
+  });
+
+  it('DEC-26: SMTP con TLS implícito en 465, STARTTLS obligatorio fuera de local y tiempos máximos finitos', () => {
+    expect(problemsOf({ SMTP_PORT: '465', SMTP_SECURE: 'false' }).join(' ')).toContain('SMTP_SECURE');
+    expect(problemsOf({ SMTP_PORT: '465', SMTP_SECURE: 'true' })).toEqual([]);
+    expect(problemsOf({ SMTP_USER: 'usuario', SMTP_PASSWORD: '' }).join(' ')).toContain('SMTP_PASSWORD');
+    for (const name of ['SMTP_CONNECTION_TIMEOUT_MS', 'SMTP_GREETING_TIMEOUT_MS', 'SMTP_SOCKET_TIMEOUT_MS']) {
+      expect(problemsOf({ [name]: undefined }).join(' ')).toContain(name);
+      expect(problemsOf({ [name]: '0' }).join(' ')).toContain(name);
+    }
+    expect(loadAuthConfig(base()).smtp).toMatchObject({ secure: false, requireTls: false, connectionTimeoutMs: 2_000 });
+    const production = {
+      NODE_ENV: 'production',
+      SMTP_HOST: 'smtp.example.test',
+      SMTP_PORT: '587',
+      APP_PUBLIC_URL: 'https://app.example.test',
+      AUTH_ALLOWED_ORIGINS: 'https://app.example.test',
+      CAPTCHA_PROVIDER: 'turnstile',
+      CAPTCHA_SECRET: 'secreto-turnstile-0123456789',
+    };
+    expect(loadAuthConfig({ ...base(), ...production }).smtp).toMatchObject({ secure: false, requireTls: true });
+    expect(loadAuthConfig({ ...base(), ...production, SMTP_PORT: '465', SMTP_SECURE: 'true' }).smtp).toMatchObject({
+      secure: true,
+      requireTls: false,
+    });
+  });
+
   it('los mensajes de error nombran la variable pero nunca su valor', () => {
     const secret = 'x'.repeat(10);
     expect(problemsOf({ JWT_ACCESS_SECRET: secret }).join(' ')).not.toContain(secret);

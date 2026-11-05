@@ -27,7 +27,17 @@ async function searchBySubject(subject: string): Promise<MailpitSearch['messages
 (API ? describe : describe.skip)('Mailpit: correo visible en desarrollo (T-21, DEC-05)', () => {
   it('un correo enviado por el adaptador SMTP aparece en Mailpit', async () => {
     const sender = new NodemailerSmtpMailSender(
-      { host: SMTP_HOST, port: SMTP_PORT, secure: false, user: undefined, password: undefined },
+      {
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: false,
+        requireTls: false,
+        user: undefined,
+        password: undefined,
+        connectionTimeoutMs: 2_000,
+        greetingTimeoutMs: 2_000,
+        socketTimeoutMs: 5_000,
+      },
       'OMR PreICFES <no-reply@example.test>',
     );
     const subject = `Prueba T-21 ${randomBytes(6).toString('hex')}`;

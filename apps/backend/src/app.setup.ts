@@ -1,6 +1,9 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { RedactingLogger } from './audit/redacting-logger';
 import type { AuthConfig } from './config/auth-config';
+import { AuthMetrics } from './observability/auth-metrics';
+import { authMetricsMiddleware } from './observability/http-observability';
+import { CORRELATION_HEADER, correlationIdMiddleware } from './observability/request-context';
 import { AUTH_CONFIG } from './config/config.module';
 
 /** Prefijo global de la API (plan HT-CORE-01 §8 y §9.8, DEC-15). */
@@ -14,12 +17,16 @@ export function configureApp(app: NestExpressApplication): void {
   // IP real solo a través de TRUST_PROXY_HOPS proxies confiables; con 0, se ignora X-Forwarded-For (plan §11).
   app.set('trust proxy', config.trustProxyHops > 0 ? config.trustProxyHops : false);
   app.disable('x-powered-by');
+  // T-47 (DEC-25): identificador por solicitud generado en el servidor y métricas de /api/v1/auth.
+  app.use(correlationIdMiddleware);
+  app.use(authMetricsMiddleware(app.get(AuthMetrics)));
   // CORS con la lista explícita de AUTH_ALLOWED_ORIGINS y credenciales; nunca `*` (DEC-20).
   app.enableCors({
     origin: [...config.authAllowedOrigins],
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: [CORRELATION_HEADER],
     maxAge: 600,
   });
   app.setGlobalPrefix(API_PREFIX);

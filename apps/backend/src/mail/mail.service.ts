@@ -3,7 +3,7 @@ import type { Types } from 'mongoose';
 import { AUTH_CONFIG } from '../config/config.module';
 import type { AuthConfig } from '../config/auth-config';
 import { LinkBuilder } from './link-builder';
-import { MailDispatcher } from './mail-dispatcher';
+import { MailDispatcher, type MailJob } from './mail-dispatcher';
 import { renderTemplate, type MailTemplate } from './mail-templates';
 
 export interface MailRecipient {
@@ -24,9 +24,13 @@ export class MailService {
     @Inject(AUTH_CONFIG) private readonly config: Pick<AuthConfig, 'ttl'>,
   ) {}
 
-  private send(template: MailTemplate, to: MailRecipient, link?: string, vigenciaMs?: number): boolean {
+  private job(template: MailTemplate, to: MailRecipient, link?: string, vigenciaMs?: number): MailJob {
     const rendered = renderTemplate(template, to.nombre, link, vigenciaMs);
-    return this.dispatcher.dispatch({ template, usuarioId: to.usuarioId, message: { to: to.correo, ...rendered } });
+    return { template, usuarioId: to.usuarioId, message: { to: to.correo, ...rendered } };
+  }
+
+  private send(template: MailTemplate, to: MailRecipient, link?: string, vigenciaMs?: number): boolean {
+    return this.dispatcher.dispatch(this.job(template, to, link, vigenciaMs));
   }
 
   sendVerification(to: MailRecipient, token: string, isResend = false): boolean {
@@ -44,6 +48,13 @@ export class MailService {
 
   sendActivation(to: MailRecipient, token: string): boolean {
     return this.send('ACTIVACION', to, this.links.build('activarCuenta', token), this.config.ttl.activationTokenMs);
+  }
+
+  /** Envío síncrono del enlace de activación para `bootstrap:admin` (T-35): `false` si el envío falló. */
+  deliverActivation(to: MailRecipient, token: string): Promise<boolean> {
+    return this.dispatcher.deliver(
+      this.job('ACTIVACION', to, this.links.build('activarCuenta', token), this.config.ttl.activationTokenMs),
+    );
   }
 
   sendPasswordChangedNotice(to: MailRecipient): boolean {

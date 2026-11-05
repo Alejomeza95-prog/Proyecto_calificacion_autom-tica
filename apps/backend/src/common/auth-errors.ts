@@ -39,3 +39,19 @@ export class InvalidCredentialsError extends Error {
     this.name = 'InvalidCredentialsError';
   }
 }
+
+/** 400 `enlace-invalido`: token inexistente, vencido, usado, reemplazado o cuenta no elegible (genérico). */
+export class InvalidLinkError extends Error {
+  constructor() {
+    super('Enlace inválido');
+    this.name = 'InvalidLinkError';
+  }
+}
+
+/** 422: la contraseña no cumple la política publicada (CA-03). Lleva solo el motivo, nunca el valor. */
+export class PasswordPolicyError extends Error {
+  constructor(readonly reason: 'DEMASIADO_CORTA' | 'DEMASIADO_LARGA') {
+    super('La contraseña no cumple la política');
+    this.name = 'PasswordPolicyError';
+  }
+}

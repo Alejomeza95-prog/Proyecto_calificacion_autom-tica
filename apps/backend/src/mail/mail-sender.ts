@@ -15,7 +15,12 @@ export interface MailSender {
 
 export const MAIL_SENDER = Symbol('MAIL_SENDER');
 
-/** Adaptador SMTP genérico con Nodemailer: sirve para cualquier proveedor con SMTP (DEC-09). */
+/**
+ * Adaptador SMTP genérico con Nodemailer: sirve para cualquier proveedor con SMTP (DEC-09).
+ * DEC-26: TLS implícito con `secure` (puerto 465); si no, STARTTLS **obligatorio** fuera de local
+ * (`requireTLS`: si el servidor no lo ofrece, el envío falla en vez de seguir sin cifrar); TLS 1.2 o
+ * superior con verificación de certificado; tiempos máximos finitos de conexión, saludo y socket.
+ */
 export class NodemailerSmtpMailSender implements MailSender {
   private readonly transporter: Transporter;
 
@@ -27,6 +32,11 @@ export class NodemailerSmtpMailSender implements MailSender {
       host: smtp.host,
       port: smtp.port,
       secure: smtp.secure,
+      requireTLS: smtp.requireTls,
+      tls: { minVersion: 'TLSv1.2' },
+      connectionTimeout: smtp.connectionTimeoutMs,
+      greetingTimeout: smtp.greetingTimeoutMs,
+      socketTimeout: smtp.socketTimeoutMs,
       auth: smtp.user ? { user: smtp.user, pass: smtp.password ?? '' } : undefined,
     });
   }

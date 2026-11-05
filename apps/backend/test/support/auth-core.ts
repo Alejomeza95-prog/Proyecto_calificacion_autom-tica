@@ -4,7 +4,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import type { Connection } from 'mongoose';
 import { AuthCoreModule, REDIS_CLIENT } from '../../src/auth/auth-core.module';
-import { CAPTCHA_VERIFIER, TestCaptchaVerifier } from '../../src/captcha/captcha-verifier';
+import { CAPTCHA_VERIFIER, TestCaptchaVerifier, type CaptchaVerifier } from '../../src/captcha/captcha-verifier';
 import { CLOCK, type Clock } from '../../src/common/clock';
 import { loadAuthConfig, type AuthConfig } from '../../src/config/auth-config';
 import { AppConfigModule, AUTH_CONFIG } from '../../src/config/config.module';
@@ -58,6 +58,8 @@ export async function bootAuthCore(
     env?: Record<string, string | undefined>;
     migrate?: boolean;
     captchaSlowMs?: number;
+    /** Otro adaptador de CAPTCHA (p. ej. Turnstile contra un servidor simulado, T-41). */
+    captchaVerifier?: CaptchaVerifier;
     /** Prefijo de Redis compartido: simula varias instancias sobre el mismo Redis. */
     redisPrefix?: string;
   } = {},
@@ -79,7 +81,7 @@ export async function bootAuthCore(
     .overrideProvider(MAIL_SENDER)
     .useValue(mail)
     .overrideProvider(CAPTCHA_VERIFIER)
-    .useValue(captcha)
+    .useValue(options.captchaVerifier ?? captcha)
     .overrideProvider(REDIS_CLIENT)
     .useFactory({
       factory: () =>

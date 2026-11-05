@@ -56,19 +56,22 @@ La API valida estas variables al arrancar: si falta una o tiene formato inválid
 | `RATE_LIMIT_REDIS_TIMEOUT_MS` | No | NestJS | Espera máxima a Redis; sin respuesta, las operaciones sensibles responden 503 (DEC-06). |
 | `TRUST_PROXY_HOPS` | No | NestJS | Saltos de proxy confiables para obtener la IP real (`0` en local). Debe coincidir con la topología del despliegue. |
 | `SESSION_MAX_ROTATIONS` | No | NestJS | Tope de rotaciones del token de renovación por sesión (`1000`). |
-| `CAPTCHA_PROVIDER` | No | NestJS | Proveedor de CAPTCHA (DEC-16). Hoy solo `test`, admitido únicamente en local; el proveedor real está pendiente y bloquea el release. |
-| `CAPTCHA_SITE_KEY` | No | Frontend | Clave pública del widget (cuando se elija el proveedor). |
-| `CAPTCHA_SECRET` | Sí | NestJS | Secreto del proveedor (cuando se elija). |
+| `CAPTCHA_PROVIDER` | No | NestJS | Proveedor de CAPTCHA (DEC-16): `turnstile` (Cloudflare Turnstile Managed, DEC-24) o `test`, admitido únicamente en local. |
+| `CAPTCHA_SITE_KEY` | No | Frontend | Clave pública del widget de Turnstile (historia de frontend); el backend no la lee. |
+| `CAPTCHA_SECRET` | Sí | NestJS | Secreto de Turnstile; obligatorio con `CAPTCHA_PROVIDER=turnstile`. Los hostnames aceptados salen de `AUTH_ALLOWED_ORIGINS`. |
 | `CAPTCHA_VERIFY_TIMEOUT_MS` | No | NestJS | Espera máxima al proveedor; sin respuesta, 503. |
 | `ARGON2_MAX_CONCURRENCY` | No | NestJS | Verificaciones Argon2id simultáneas **por proceso**; no mayor que `UV_THREADPOOL_SIZE` (DEC-17). |
 | `ARGON2_QUEUE_MAX` | No | NestJS | Tope de la cola de `Argon2Gate`. |
 | `ARGON2_QUEUE_TIMEOUT_MS` | No | NestJS | Espera máxima en la cola; vencida → 503. |
 | `UV_THREADPOOL_SIZE` | No | Node.js | Hilos del pool de libuv (por defecto 4). |
 | `AUTH_OVERLOAD_RETRY_AFTER_S` | No | NestJS | `Retry-After` de los 503 por saturación o indisponibilidad. |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` | No | NestJS | Servidor SMTP. En local, Mailpit (`localhost:1025`, perfil `mail-dev`); con `NODE_ENV=production`, `mailpit` o `localhost` impiden arrancar (DEC-05). |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` | No | NestJS | Servidor SMTP. En local, Mailpit (`localhost:1025`, perfil `mail-dev`); con `NODE_ENV=production`, `mailpit` o `localhost` impiden arrancar (DEC-05). `SMTP_SECURE=true` = TLS implícito, obligatorio con el puerto 465; con `false`, fuera de local se exige STARTTLS (DEC-26). |
+| `SMTP_CONNECTION_TIMEOUT_MS` / `SMTP_GREETING_TIMEOUT_MS` / `SMTP_SOCKET_TIMEOUT_MS` | No | NestJS | Tiempos máximos de conexión, saludo e inactividad del socket SMTP (enteros positivos, DEC-26). |
 | `SMTP_USER` / `SMTP_PASSWORD` | Sí | NestJS | Credenciales SMTP; vacías en local. Proveedor de producción pendiente. |
 | `MAIL_FROM` | No | NestJS | Remitente de los correos. |
 | `MAIL_DRAIN_TIMEOUT_MS` | No | NestJS | Espera máxima para enviar correos pendientes al apagar (DEC-09). |
+| `METRICS_PORT` | No | NestJS | Puerto del servidor **interno** de métricas (`GET /metrics`, T-47, DEC-25); `0` lo deshabilita. Distinto del de la API; nunca publicarlo fuera de la red interna. |
+| `METRICS_HOST` | No | NestJS | Dirección IP en la que escucha el servidor de métricas (`127.0.0.1` en el host). |
 | `AUDIT_IP_PEPPER` | Sí | NestJS | Secreto del HMAC de la IP en `auditoria_auth`. Mínimo 32 caracteres. |
 | `SEED_DEV_PASSWORD` | Sí | `pnpm migrate:up` (seed `002`) | Solo desarrollo y pruebas: contraseña de las cuentas semilla (mínimo 12 caracteres). Nunca se versiona. |
 

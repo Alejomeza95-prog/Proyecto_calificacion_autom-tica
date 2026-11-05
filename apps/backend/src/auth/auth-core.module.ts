@@ -1,7 +1,8 @@
 import { Inject, Module, type OnApplicationShutdown } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { AuditService } from '../audit/audit.service';
-import { CAPTCHA_VERIFIER, TestCaptchaVerifier } from '../captcha/captcha-verifier';
+import { CAPTCHA_VERIFIER, TestCaptchaVerifier, type CaptchaVerifier } from '../captcha/captcha-verifier';
+import { TurnstileCaptchaVerifier } from '../captcha/turnstile-captcha-verifier';
 import { AuthRateLimitService, RATE_LIMITER } from '../common/rate-limit/auth-rate-limit.service';
 import { RedisRateLimiter } from '../common/rate-limit/redis-rate-limiter';
 import { AUTH_CONFIG } from '../config/config.module';
@@ -12,6 +13,7 @@ import { MAIL_SENDER, NodemailerSmtpMailSender } from '../mail/mail-sender';
 import { MailService } from '../mail/mail.service';
 import { SecurityTokensService } from '../security-tokens/security-tokens.service';
 import { SessionsService } from '../sessions/sessions.service';
+import { AuthMetrics } from '../observability/auth-metrics';
 import { UsersService } from '../users/users.service';
 import { Argon2Gate } from './password/argon2-gate';
 import { PasswordHasher } from './password/password-hasher';
@@ -28,8 +30,7 @@ class RedisLifecycle implements OnApplicationShutdown {
 
 /**
  * Servicios de dominio de autenticación (Fase 2 de HT-AUTH-01). Los controladores HTTP se agregan en la
- * Fase 3. El adaptador real de CAPTCHA está pendiente (DEC-16); la configuración solo admite el de
- * prueba en local.
+ * Fase 3. CAPTCHA: Cloudflare Turnstile (DEC-24) o, solo en local, el adaptador de prueba (DEC-16).
  */
 @Module({
   providers: [
@@ -56,7 +57,20 @@ class RedisLifecycle implements OnApplicationShutdown {
         new Argon2Gate({ ...config.argon2, retryAfterS: config.authOverloadRetryAfterS }),
     },
     { provide: PasswordHasher, inject: [Argon2Gate], useFactory: (gate: Argon2Gate) => new PasswordHasher(gate) },
-    { provide: CAPTCHA_VERIFIER, useFactory: () => new TestCaptchaVerifier() },
+    { provide: AuthMetrics, inject: [Argon2Gate], useFactory: (gate: Argon2Gate) => new AuthMetrics(gate) },
+    {
+      // DEC-16/DEC-24: Turnstile en despliegues; el adaptador de prueba solo en local (la configuración lo exige).
+      provide: CAPTCHA_VERIFIER,
+      inject: [AUTH_CONFIG],
+      useFactory: (config: AuthConfig): CaptchaVerifier =>
+        config.captcha.provider === 'turnstile'
+          ? new TurnstileCaptchaVerifier({
+              secret: config.captcha.secret ?? '',
+              expectedHostnames: config.captcha.expectedHostnames,
+              timeoutMs: config.captcha.verifyTimeoutMs,
+            })
+          : new TestCaptchaVerifier(),
+    },
     {
       provide: MAIL_SENDER,
       inject: [AUTH_CONFIG],
@@ -79,6 +93,7 @@ class RedisLifecycle implements OnApplicationShutdown {
     MailService,
     PasswordHasher,
     AuthRateLimitService,
+    AuthMetrics,
     REDIS_CLIENT,
   ],
 })

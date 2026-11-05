@@ -18,7 +18,8 @@
     "test:int": "node --env-file-if-exists=../../.env --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-int.json --runInBand",
     "migrate:up": "node dist/cli/migrate.js up",
     "migrate:down": "node dist/cli/migrate.js down",
-    "migrate:status": "node dist/cli/migrate.js status"
+    "migrate:status": "node dist/cli/migrate.js status",
+    "bootstrap:admin": "node dist/cli/bootstrap-admin.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.3.2",
@@ -26,6 +27,7 @@
     "@nestjs/jwt": "^12.0.3",
     "@nestjs/mongoose": "^12.0.0",
     "@nestjs/platform-express": "^12.3.2",
+    "@prometheus-io/client": "0.16.1",
     "argon2": "^0.45.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",

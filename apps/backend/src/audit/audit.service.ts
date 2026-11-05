@@ -1,3 +1,4 @@
+import { currentCorrelationId } from '../observability/request-context';
 import { createHmac } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -38,7 +39,8 @@ export class AuditService {
       resultado: entry.resultado,
       usuario_id: entry.usuarioId ?? null,
       ip_hash: entry.ip ? this.hashIp(entry.ip) : null,
-      correlation_id: entry.correlationId ?? null,
+      // T-47: identificador de la solicitud en curso (AsyncLocalStorage), también en envíos diferidos.
+      correlation_id: entry.correlationId ?? currentCorrelationId() ?? null,
     });
   }
 

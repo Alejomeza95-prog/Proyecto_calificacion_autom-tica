@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import { parseDuration, parseRateLimitRule, type RateLimitRule } from './duration';
 
 /**
@@ -28,7 +29,7 @@ export const RATE_LIMIT_KEYS = [
 ] as const;
 export type RateLimitKey = (typeof RATE_LIMIT_KEYS)[number];
 
-export const CAPTCHA_PROVIDERS = ['test'] as const;
+export const CAPTCHA_PROVIDERS = ['test', 'turnstile'] as const;
 export type CaptchaProvider = (typeof CAPTCHA_PROVIDERS)[number];
 
 export interface AuthConfig {
@@ -62,17 +63,32 @@ export interface AuthConfig {
   readonly captcha: {
     readonly provider: CaptchaProvider;
     readonly verifyTimeoutMs: number;
+    /** Secreto del proveedor; obligatorio con `turnstile` (DEC-16, DEC-24). Nunca se registra. */
+    readonly secret: string | undefined;
+    /** Hostnames en los que se sirve el widget: los de `AUTH_ALLOWED_ORIGINS` (DEC-24). */
+    readonly expectedHostnames: readonly string[];
   };
   readonly smtp: {
     readonly host: string;
     readonly port: number;
+    /** TLS implícito (obligatorio en el puerto 465). */
     readonly secure: boolean;
+    /** STARTTLS obligatorio: fuera de local cuando no hay TLS implícito (DEC-26). */
+    readonly requireTls: boolean;
     readonly user: string | undefined;
     readonly password: string | undefined;
+    readonly connectionTimeoutMs: number;
+    readonly greetingTimeoutMs: number;
+    readonly socketTimeoutMs: number;
   };
   readonly mailFrom: string;
   readonly mailDrainTimeoutMs: number;
   readonly auditIpPepper: string;
+  /** Servidor interno de métricas (T-47, DEC-25): `port` 0 = deshabilitado. */
+  readonly metrics: {
+    readonly port: number;
+    readonly host: string;
+  };
 }
 
 export class ConfigValidationError extends Error {
@@ -252,10 +268,32 @@ export function loadAuthConfig(env: Env): AuthConfig {
   if (captchaProvider === 'test' && !isLocal) {
     r.problems.push('CAPTCHA_PROVIDER: el adaptador de prueba no se admite fuera de local (DEC-16)');
   }
+  const captchaSecret = r.optionalString('CAPTCHA_SECRET');
+  if (captchaProvider === 'turnstile' && (!captchaSecret || /\s/.test(captchaSecret))) {
+    r.problems.push('CAPTCHA_SECRET: obligatoria y sin espacios con CAPTCHA_PROVIDER=turnstile (DEC-24)');
+  }
 
   const smtpHost = r.string('SMTP_HOST');
+  const smtpPort = r.integer('SMTP_PORT', 1);
+  const smtpSecure = r.boolean('SMTP_SECURE');
+  // DEC-26: el puerto 465 es TLS implícito; con STARTTLS, el cifrado es obligatorio fuera de local.
+  if (smtpPort === 465 && !smtpSecure) {
+    r.problems.push('SMTP_SECURE: debe ser true con SMTP_PORT=465 (TLS implícito, DEC-26)');
+  }
+  const smtpUser = r.optionalString('SMTP_USER');
+  const smtpPassword = r.optionalString('SMTP_PASSWORD');
+  if (smtpUser && !smtpPassword) r.problems.push('SMTP_PASSWORD: obligatoria si se define SMTP_USER');
   if (nodeEnv === 'production' && LOCAL_SMTP_HOSTS.has(smtpHost.toLowerCase())) {
     r.problems.push('SMTP_HOST: Mailpit o localhost no se admiten con NODE_ENV=production (DEC-05)');
+  }
+
+  // DEC-25: métricas en un puerto interno, distinto del de la API, y en una dirección IP explícita.
+  const metricsPort = r.integer('METRICS_PORT', 0);
+  const metricsHost = r.string('METRICS_HOST');
+  if (metricsHost && isIP(metricsHost) === 0) r.problems.push('METRICS_HOST: dirección IP (p. ej. 127.0.0.1)');
+  if (metricsPort > 65_535) r.problems.push('METRICS_PORT: entre 0 y 65535');
+  if (metricsPort !== 0 && metricsPort === Number(env.PORT?.trim() || '3000')) {
+    r.problems.push('METRICS_PORT: debe ser distinto del puerto de la API (las métricas no son públicas)');
   }
 
   const config: AuthConfig = {
@@ -278,17 +316,24 @@ export function loadAuthConfig(env: Env): AuthConfig {
     captcha: {
       provider: captchaProvider ?? 'test',
       verifyTimeoutMs: r.integer('CAPTCHA_VERIFY_TIMEOUT_MS', 1),
+      secret: captchaSecret,
+      expectedHostnames: [...new Set(authAllowedOrigins.map((o) => new URL(o).hostname))],
     },
     smtp: {
       host: smtpHost,
-      port: r.integer('SMTP_PORT', 1),
-      secure: r.boolean('SMTP_SECURE'),
-      user: r.optionalString('SMTP_USER'),
-      password: r.optionalString('SMTP_PASSWORD'),
+      port: smtpPort,
+      secure: smtpSecure,
+      requireTls: !isLocal && !smtpSecure,
+      user: smtpUser,
+      password: smtpPassword,
+      connectionTimeoutMs: r.integer('SMTP_CONNECTION_TIMEOUT_MS', 1),
+      greetingTimeoutMs: r.integer('SMTP_GREETING_TIMEOUT_MS', 1),
+      socketTimeoutMs: r.integer('SMTP_SOCKET_TIMEOUT_MS', 1),
     },
     mailFrom: r.string('MAIL_FROM'),
     mailDrainTimeoutMs: r.integer('MAIL_DRAIN_TIMEOUT_MS', 1),
     auditIpPepper: r.secret('AUDIT_IP_PEPPER'),
+    metrics: { port: metricsPort, host: metricsHost },
   };
 
   if (r.problems.length > 0) throw new ConfigValidationError(r.problems);

@@ -47,6 +47,8 @@ export interface HttpHarness {
   readonly config: AuthConfig;
   readonly clock: FakeClock;
   readonly mail: InMemoryMailSender;
+  /** Espera a que el `MailDispatcher` (envío tras responder) haya entregado al menos `count` correos. */
+  waitForMail(count: number): Promise<void>;
   readonly captcha: TestCaptchaVerifier;
   readonly redis: Redis;
   readonly connection: Connection;
@@ -79,7 +81,12 @@ export function refreshCookieFrom(setCookie: string | string[] | undefined): { c
  */
 export async function bootHttpApp(
   suite: string,
-  options: { env?: Record<string, string | undefined>; imports?: ModuleMetadata['imports'] } = {},
+  options: {
+    env?: Record<string, string | undefined>;
+    imports?: ModuleMetadata['imports'];
+    /** Sustituye proveedores por valores de prueba (p. ej. un `InvitationResolver` sembrado). */
+    overrides?: readonly { provide: unknown; useValue: unknown }[];
+  } = {},
 ): Promise<HttpHarness> {
   const id = randomBytes(4).toString('hex');
   const dbName = `omr_test_${suite}_${id}`;
@@ -90,7 +97,7 @@ export async function bootHttpApp(
   const captcha = new TestCaptchaVerifier(5_000);
   requireEnv('REDIS_URL');
 
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule, ...(options.imports ?? [])] })
+  let builder = Test.createTestingModule({ imports: [AppModule, ...(options.imports ?? [])] })
     .overrideProvider(AUTH_CONFIG)
     .useValue(config)
     .overrideProvider(CLOCK)
@@ -108,8 +115,9 @@ export async function bootHttpApp(
           maxRetriesPerRequest: 0,
           commandTimeout: config.rateLimitRedisTimeoutMs,
         }),
-    })
-    .compile();
+    });
+  for (const o of options.overrides ?? []) builder = builder.overrideProvider(o.provide).useValue(o.useValue);
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
   configureApp(app);
@@ -149,6 +157,10 @@ export async function bootHttpApp(
     config,
     clock,
     mail,
+    async waitForMail(count) {
+      for (let i = 0; i < 200 && mail.sent.length < count; i += 1) await new Promise((r) => setTimeout(r, 10));
+      if (mail.sent.length < count) throw new Error(`se esperaban ${count} correos y llegaron ${mail.sent.length}`);
+    },
     captcha,
     redis,
     connection,

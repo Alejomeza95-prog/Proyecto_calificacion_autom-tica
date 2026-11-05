@@ -1,4 +1,5 @@
 import { HttpException } from '@nestjs/common';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../auth/password/password-policy';
 
 /**
  * Formato de error `application/problem+json` (RFC 9457) del proyecto (plan §8).
@@ -16,6 +17,8 @@ export const ProblemType = {
   ACCESO_DENEGADO: 'acceso-denegado',
   ORIGEN_NO_PERMITIDO: 'origen-no-permitido',
   NO_ENCONTRADO: 'no-encontrado',
+  ENLACE_INVALIDO: 'enlace-invalido',
+  POLITICA_PASSWORD: 'politica-password',
   DEMASIADOS_INTENTOS: 'demasiados-intentos',
   LIMITADOR_NO_DISPONIBLE: 'limitador-no-disponible',
   SERVICIO_SATURADO: 'servicio-saturado',
@@ -32,6 +35,8 @@ export const PROBLEM_TITLES: Readonly<Record<ProblemType, string>> = {
   'acceso-denegado': 'Acceso denegado',
   'origen-no-permitido': 'Acceso denegado',
   'no-encontrado': 'Recurso no encontrado',
+  'enlace-invalido': 'El enlace no es válido o ya venció. Solicita uno nuevo',
+  'politica-password': `La contraseña debe tener entre ${PASSWORD_MIN_LENGTH} y ${PASSWORD_MAX_LENGTH} caracteres`,
   'demasiados-intentos': 'Demasiados intentos. Intenta de nuevo más tarde',
   'limitador-no-disponible': 'Servicio temporalmente no disponible',
   'servicio-saturado': 'Servicio temporalmente no disponible',

@@ -37,7 +37,9 @@ export function testEnv(overrides: Record<string, string | undefined> = {}): Rec
     RATE_LIMIT_ACTIVATE_IP: '30/15m',
     RATE_LIMIT_AUTH_GLOBAL: '10000/1m',
     RATE_LIMIT_KEY_PEPPER: randomBytes(32).toString('hex'),
-    RATE_LIMIT_REDIS_TIMEOUT_MS: '500',
+    // Holgado para pruebas bajo carga (--detectOpenHandles, ráfagas concurrentes); el fallo cerrado no depende
+    // de este valor porque el cliente no encola comandos sin conexión (enableOfflineQueue: false).
+    RATE_LIMIT_REDIS_TIMEOUT_MS: '5000',
     TRUST_PROXY_HOPS: '0',
     SESSION_MAX_ROTATIONS: '1000',
     AUTH_OVERLOAD_RETRY_AFTER_S: '5',
@@ -50,8 +52,13 @@ export function testEnv(overrides: Record<string, string | undefined> = {}): Rec
     SMTP_HOST: 'localhost',
     SMTP_PORT: '1025',
     SMTP_SECURE: 'false',
+    SMTP_CONNECTION_TIMEOUT_MS: '2000',
+    SMTP_GREETING_TIMEOUT_MS: '2000',
+    SMTP_SOCKET_TIMEOUT_MS: '5000',
     MAIL_FROM: 'no-responder@example.test',
     MAIL_DRAIN_TIMEOUT_MS: '2000',
+    METRICS_PORT: '0',
+    METRICS_HOST: '127.0.0.1',
     AUDIT_IP_PEPPER: randomBytes(32).toString('hex'),
     ...overrides,
   };

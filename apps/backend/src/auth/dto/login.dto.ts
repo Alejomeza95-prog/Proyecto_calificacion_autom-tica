@@ -20,6 +20,6 @@ export class LoginDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
-  @MaxLength(4096)
+  @MaxLength(2048)
   captchaToken?: string;
 }

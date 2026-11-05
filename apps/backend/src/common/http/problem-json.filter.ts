@@ -1,8 +1,11 @@
+import { setProblemType } from '../../observability/http-observability';
 import { ArgumentsHost, Catch, HttpException, Logger, type ExceptionFilter } from '@nestjs/common';
 import { redactText } from '../../audit/redact';
 import {
   ChallengeRequiredError,
   InvalidCredentialsError,
+  InvalidLinkError,
+  PasswordPolicyError,
   ServiceUnavailableError,
   TooManyAttemptsError,
 } from '../auth-errors';
@@ -50,6 +53,7 @@ export class ProblemJsonFilter implements ExceptionFilter {
     if (t.retryAfterS !== undefined) response.setHeader('Retry-After', String(t.retryAfterS));
     response.setHeader('Content-Type', PROBLEM_CONTENT_TYPE);
     response.setHeader('Cache-Control', 'no-store');
+    setProblemType(response, t.type);
     response.status(t.status).json(problemBody(t.status, t.type, t.errores));
   }
 
@@ -62,6 +66,14 @@ export class ProblemJsonFilter implements ExceptionFilter {
     }
     if (exception instanceof ChallengeRequiredError) return { status: 401, type: ProblemType.DESAFIO_REQUERIDO };
     if (exception instanceof InvalidCredentialsError) return { status: 401, type: ProblemType.CREDENCIALES_INVALIDAS };
+    if (exception instanceof InvalidLinkError) return { status: 400, type: ProblemType.ENLACE_INVALIDO };
+    if (exception instanceof PasswordPolicyError) {
+      return {
+        status: 422,
+        type: ProblemType.POLITICA_PASSWORD,
+        errores: [{ campo: 'password', reglas: [exception.reason] }],
+      };
+    }
     if (exception instanceof ProblemException) {
       return { status: exception.getStatus(), type: exception.problemType, errores: exception.errores };
     }
