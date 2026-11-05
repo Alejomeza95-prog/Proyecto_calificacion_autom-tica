@@ -41,6 +41,11 @@ services:
     environment:
       MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD_URLENCODED:?definir MONGO_ROOT_PASSWORD_URLENCODED en .env}@mongo:27017/${MONGO_DB}?authSource=admin
       REDIS_URL: redis://redis:6379/0
+      # SOLO desarrollo local con Docker (HT-AUTH-01 DEC-05): el backend en contenedor envía a Mailpit
+      # del perfil `mail-dev` por la red `omr` (`localhost` sería el propio contenedor). Levantar ambos
+      # perfiles: docker compose --profile app --profile mail-dev up -d. Mailpit nunca es el proveedor de
+      # producción: con NODE_ENV=production el arranque falla con SMTP_HOST=mailpit (validación de T-11).
+      SMTP_HOST: mailpit
     depends_on:
       mongo:
         condition: service_healthy
@@ -74,6 +79,16 @@ services:
       backend:
         condition: service_healthy
     ports: ["127.0.0.1:5173:5173"]
+    networks: [omr]
+  # Captura de correo SOLO para desarrollo y pruebas (HT-AUTH-01 DEC-05). Perfil `mail-dev`:
+  # nunca forma parte del perfil `app` ni de un despliegue. Interfaz: http://127.0.0.1:8025
+  mailpit:
+    profiles: ["mail-dev"]
+    image: axllent/mailpit:v1.33.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
     networks: [omr]
 networks:
   omr: {}
