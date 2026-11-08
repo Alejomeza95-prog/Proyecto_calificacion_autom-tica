@@ -1,0 +1,232 @@
+/* Móvil primero: barra con el nombre y tarjeta a todo el ancho. */
+.page {
+  --card-pad-block: 1.75rem;
+  --card-pad-inline: 1.25rem;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+}
+
+.panel {
+  padding: var(--step-2);
+  background: var(--panel);
+  color: var(--panel-ink);
+}
+
+.brand {
+  font-size: 1.125rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.pitch,
+.sheet {
+  display: none;
+}
+
+.main {
+  min-width: 0;
+  padding: var(--step-2);
+}
+
+.card {
+  min-width: 0;
+  padding: var(--card-pad-block) var(--card-pad-inline);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow:
+    0 1px 2px rgb(16 24 40 / 0.05),
+    0 12px 32px -12px rgb(16 24 40 / 0.14);
+}
+
+.card h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* Recibe el foco solo por programa, al cambiar de pantalla. */
+.card h1:focus {
+  outline: none;
+}
+
+.description {
+  max-width: 60ch;
+  margin-top: var(--step-1);
+  color: var(--ink-muted);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+/* Hoja OMR del panel. */
+.sheetLabel {
+  fill: #6b7899;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.reviewLabel {
+  fill: #2a1d00;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Tableta: el panel es una franja con el nombre y la declaración, sin ilustración. */
+@media (min-width: 40rem) {
+  .page {
+    --card-pad-block: 2.25rem;
+    --card-pad-inline: 2.25rem;
+  }
+
+  /* El texto del panel arranca en el mismo borde que el contenido de la tarjeta (máx. 32rem, centrada). */
+  .panel {
+    padding: var(--step-3) max(var(--step-4), calc((100% - 32rem) / 2 + var(--card-pad-inline))) var(--step-4);
+  }
+
+  .pitch {
+    display: block;
+    margin-top: var(--step-3);
+  }
+
+  .statement {
+    max-width: 22ch;
+    font-size: clamp(1.5rem, 1.1rem + 1.2vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  .support {
+    max-width: 46ch;
+    margin-top: 0.75rem;
+    color: var(--panel-muted);
+    font-size: 1.0625rem;
+  }
+
+  .main {
+    display: grid;
+    justify-items: center;
+    align-items: start;
+    padding: var(--step-4) var(--step-3);
+  }
+
+  .card {
+    width: 100%;
+    max-width: 32rem;
+  }
+
+  .card h1 {
+    font-size: 1.75rem;
+  }
+}
+
+/* Escritorio: dos columnas, panel institucional a toda altura con la hoja OMR. */
+@media (min-width: 64rem) {
+  .page {
+    --card-pad-block: 2.75rem;
+    --card-pad-inline: 2.75rem;
+    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+    grid-template-rows: minmax(100dvh, auto);
+  }
+
+  /* Nombre y declaración arriba, hoja en el centro y el principio del producto al pie. */
+  .panel {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    padding: var(--step-4) clamp(2.5rem, 4vw, 4rem);
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    row-gap: var(--step-3);
+    overflow: hidden;
+  }
+
+  .pitch {
+    display: contents;
+  }
+
+  .statement {
+    margin-top: var(--step-2);
+    font-size: clamp(2rem, 1.2rem + 1.4vw, 2.625rem);
+  }
+
+  .support {
+    order: 4;
+    margin-top: 0;
+  }
+
+  .sheet {
+    display: block;
+    align-self: center;
+    justify-self: center;
+    width: min(100%, 21rem);
+    max-height: 100%;
+    transform: rotate(-2.5deg);
+    filter: drop-shadow(0 22px 34px rgb(3 10 36 / 0.45));
+  }
+
+  /* Arriba y no centrada: un mensaje de validación no desplaza la tarjeta hacia arriba. */
+  .main {
+    align-items: start;
+    padding: clamp(2.5rem, 15vh, 9rem) clamp(2rem, 5vw, 5rem) var(--step-4);
+  }
+
+  .card {
+    max-width: 28rem;
+  }
+}
+
+/* Interacción firma: las marcas se rellenan en secuencia y la dudosa recibe al final su anillo de revisión. */
+@media (prefers-reduced-motion: no-preference) {
+  .mark {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: fill-mark 520ms var(--ease-out) both;
+    animation-delay: calc(var(--i) * 110ms + 300ms);
+  }
+
+  .review {
+    transform-box: fill-box;
+    transform-origin: left center;
+    animation: flag-review 600ms var(--ease-out) both;
+    animation-delay: calc(var(--i) * 110ms + 520ms);
+  }
+
+  /* El anillo se traza después de la última marca: la lectura dudosa se detecta al terminar la hoja. */
+  .reviewRing {
+    stroke-dasharray: 1;
+    animation: draw-ring 700ms var(--ease-out) both;
+    animation-delay: calc(var(--i) * 110ms + 520ms);
+  }
+}
+
+@keyframes draw-ring {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fill-mark {
+  from {
+    opacity: 0.2;
+    transform: scale(0.35);
+  }
+}
+
+@keyframes flag-review {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}

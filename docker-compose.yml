@@ -75,6 +75,10 @@ services:
     profiles: ["app"]
     build:
       context: ./apps/frontend
+    # Sin env_file: `.env` contiene secretos y este servicio solo necesita estas dos variables (HT-AUTH-02).
+    environment:
+      API_PROXY_TARGET: http://backend:3000
+      VITE_CAPTCHA_SITE_KEY: ${VITE_CAPTCHA_SITE_KEY:-}
     depends_on:
       backend:
         condition: service_healthy

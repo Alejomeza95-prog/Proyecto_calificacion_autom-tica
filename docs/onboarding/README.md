@@ -9,6 +9,7 @@ Orden de lectura recomendado:
 4. [Flujo SDD](03-flujo-sdd.md): `/sdd-spec` genera spec.md + plan.md + tasks.md → revisión (`ready`) → implementación → pruebas → PR único hacia `develop`.
 5. [Git, ramas, commits y PR](04-git-ramas-commits-pr.md): `main` estable, `develop` integración, `feature/<ID>` por historia.
 6. [Skills de Claude Code](05-skills-claude-code.md): qué skill usar en cada paso.
+   - [Frontend de autenticación](06-frontend-autenticacion.md): configuración, pruebas E2E y requisitos de despliegue.
 7. [Catálogo de historias](../catalogo-historias.md) y [matriz de asignación](../matriz-asignacion.md).
 8. [Dependencias técnicas transversales](../dependencias-transversales.md): decisiones abiertas que bloquean historias.
 
@@ -28,11 +29,11 @@ Presentación resumida para la reunión de arranque: [`docs/presentacion-equipo.
 ├── .github/
 │   └── pull_request_template.md
 ├── apps/
-│   ├── backend/                # NestJS (esqueleto: health check, lint, typecheck, Jest)
-│   └── frontend/               # React + Vite (esqueleto: lint, typecheck, Vitest)
+│   ├── backend/                # NestJS (autenticación HT-AUTH-01, health check, migraciones, lint, typecheck, Jest)
+│   └── frontend/               # React + Vite (autenticación, HT-AUTH-02: lint, typecheck, Vitest, Playwright)
 ├── docker/templates/           # Dockerfiles de ejemplo para apps/*
 ├── docs/
-│   ├── onboarding/             # Esta guía (00-primeros-pasos … 05-skills)
+│   ├── onboarding/             # Esta guía (00-primeros-pasos … 06-frontend-autenticacion)
 │   ├── requisitos/             # Documentos fuente (pendientes de incorporar)
 │   ├── arquitectura.md
 │   ├── catalogo-historias.md
@@ -47,4 +48,4 @@ Presentación resumida para la reunión de arranque: [`docs/presentacion-equipo.
     ├── roadmap.md
     └── HU-EVAL-001/            # Borrador (draft): spec.md + tasks.md preliminar, falta plan.md
 ```
-`apps/backend` y `apps/frontend` contienen los esqueletos creados por HT-CORE-01. `apps/omr` aún no existe (OMR-001..003).
+`apps/backend` y `apps/frontend` parten de los esqueletos creados por HT-CORE-01, y `apps/frontend` ya incluye la autenticación de HT-AUTH-02. `apps/omr` aún no existe (OMR-001..003).

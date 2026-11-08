@@ -27,6 +27,14 @@ $p = Read-Host -AsSecureString "Contraseña"
 ```
 Copiar el resultado en `MONGO_ROOT_PASSWORD_URLENCODED` y dentro de `MONGODB_URI`. Si la contraseña cambia, regenerar ambas.
 
+## Frontend (HT-AUTH-02, plan §9.4)
+En el host, Vite lee `apps/frontend/.env.local` (ignorado por Git). En Compose, el servicio `frontend` recibe solo estas dos variables, sin `env_file`, porque `.env` contiene secretos.
+
+| Variable | Secreta | Consumida por | Descripción |
+|---|---|---|---|
+| `VITE_CAPTCHA_SITE_KEY` | No | Navegador | Sitekey pública de Turnstile. Sustituye a `CAPTCHA_SITE_KEY` en el frontend. Nunca poner aquí `CAPTCHA_SECRET`. |
+| `API_PROXY_TARGET` | No | Servidor de desarrollo de Vite | Destino del proxy de `/api/v1`: `http://localhost:3000` en el host (valor por defecto) y `http://backend:3000` en Compose. No llega al navegador. |
+
 ## Autenticación (HT-AUTH-01, plan §9.4)
 La API valida estas variables al arrancar: si falta una o tiene formato inválido, **no arranca** y el mensaje nombra la variable (nunca su valor). Formatos: duración `<entero><ms|s|m|h|d>` (p. ej. `15m`); límite `<máximo>/<ventana>` (p. ej. `60/15m`). Los valores de la plantilla son los propuestos en DEC-15; los de DEC-17 son **solo locales y no validados** hasta las pruebas de carga (T-43).
 
@@ -82,6 +90,48 @@ Generar un secreto aleatorio localmente, sin pegarlo en servicios externos:
 ```
 
 **Pruebas:** `pnpm test:int` y `pnpm test:e2e` cargan `../../.env` con `--env-file-if-exists` solo para `MONGODB_URI` y `REDIS_URL`; el resto de la configuración de prueba se genera en `test/support/test-env.ts`. Las pruebas usan bases y prefijos de Redis aislados y nunca imprimen los valores.
+
+## Backend en el host (Windows, fuera de Docker)
+La API no lee archivos `.env` por sí misma: valida solo `process.env`. `pnpm start:dev` es el comando del contenedor, donde Compose inyecta las variables; ejecutado en el host, falla con `ConfigValidationError`. En el host se usa:
+
+```powershell
+cd apps/backend
+pnpm start:local   # o: npm run start:local
+```
+
+`start:local` carga, en este orden, `../../.env` (el `.env` de la raíz) y `apps/backend/.env.local` (opcional e ignorado por Git y Docker). Usa `node --env-file-if-exists`, como `test:int` y `test:e2e`: si un archivo no existe, Node avisa y continúa, y la API hereda las variables. No se usa `nest start --env-file` porque Node 24 termina con error si un `--env-file` no existe, aunque vaya después del script. Precedencia: variables de la shell > `apps/backend/.env.local` > `.env`.
+
+- **Variables necesarias:** todas las de la tabla «Autenticación», más `MONGODB_URI` y `REDIS_URL` con `localhost` (no `mongo` ni `redis`). Mongo y Redis de Compose publican `127.0.0.1:27017` y `127.0.0.1:6379`, así que deben estar levantados: `docker compose up -d mongo redis`.
+- **Correo:** con el `.env` de la plantilla (`SMTP_HOST=localhost`, `SMTP_PORT=1025`), los correos llegan a Mailpit (`docker compose --profile mail-dev up -d mailpit`, interfaz en http://127.0.0.1:8025).
+- **Puerto 3000:** si el `backend` de Compose está levantado, ya ocupa `127.0.0.1:3000` y el arranque local falla con `EADDRINUSE`. Hay dos opciones:
+  - Detener solo ese contenedor: `docker compose stop backend`. No borra datos; para recuperarlo, `docker compose --profile app up -d backend`.
+  - O usar otro puerto: `PORT=3001` en `apps/backend/.env.local`, y `API_PROXY_TARGET=http://localhost:3001` en `apps/frontend/.env.local` para el Vite del host. El `frontend` de Compose siempre usa el backend de Compose (`http://backend:3000`).
+- **Migraciones:** `start:local` no las ejecuta. Su estado se consulta con `pnpm build` y `pnpm migrate:status`.
+
+## SMTP real (solo con el backend en el host)
+El adaptador SMTP es genérico (DEC-09): para usar un proveedor real basta con configurar variables, sin cambiar código. Todos los correos (verificación, reenvío, recuperación, activación y aviso de cambio de contraseña) usan la misma configuración.
+
+**Docker Compose usa siempre Mailpit:** `docker-compose.yml` fija `SMTP_HOST: mailpit` para el servicio `backend` (DEC-05), por encima de `.env`. Por eso la configuración real **no va en `.env`**, que Compose también carga: el contenedor intentaría enviar a Mailpit con las credenciales y el puerto reales, y fallaría. Va en `apps/backend/.env.local`, que solo carga `start:local`:
+
+```dotenv
+# apps/backend/.env.local — ignorado por Git y por Docker. Nunca copiar estos valores a la plantilla, specs, PR ni chats.
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+# false + puerto 587 = STARTTLS. Con 465, SMTP_SECURE=true (TLS implícito, DEC-26).
+SMTP_SECURE=false
+SMTP_USER=cambiar_cuenta@gmail.com
+SMTP_PASSWORD=cambiar_contrasena_de_aplicacion
+# Gmail exige que el remitente sea la cuenta autenticada o un alias verificado.
+MAIL_FROM=cambiar_cuenta@gmail.com
+```
+
+- **Gmail:** requiere la verificación en dos pasos y una **contraseña de aplicación** (no la contraseña de la cuenta). Otros proveedores usan sus propios host, puerto y credenciales.
+- **TLS:** con `NODE_ENV=development`, STARTTLS se negocia si el servidor lo ofrece (Gmail lo ofrece); fuera de local es obligatorio (DEC-26).
+- **Enlaces:** los enlaces de los correos salen de `APP_PUBLIC_URL` (`http://localhost:5173`): solo funcionan en el equipo que ejecuta el frontend.
+- **Destinatarios:** enviar solo a buzones propios. Las cuentas semilla (`@example.test`) no existen; con SMTP real, el correo a esas direcciones rebota.
+- **Registros:** la API registra solo la plantilla del correo, nunca el destinatario, el enlace ni las credenciales. Si el envío falla, se audita como `CORREO_NO_ENVIADO` y la persona puede pedir otro enlace.
+- **Pruebas automatizadas:** no usan esta configuración. Las unitarias y de integración usan `InMemoryMailSender`, y las E2E del frontend usan Mailpit desde el backend aislado.
+- **Volver a Mailpit:** borrar o comentar esas líneas de `apps/backend/.env.local` y reiniciar `start:local`.
 
 ## Reglas
 - Nunca commitear `.env` ni pegar credenciales en issues, PR, chats o specs.
