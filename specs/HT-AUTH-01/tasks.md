@@ -3,7 +3,7 @@ id: HT-AUTH-01
 spec: ./spec.md
 plan: ./plan.md
 status: in-progress      # draft | ready | in-progress | in-review | done
-updated: 2026-11-09
+updated: 2026-11-10
 ---
 
 # HT-AUTH-01 — Tasks
@@ -185,3 +185,4 @@ Reglas:
 | 2026-11-09 | **Correcciones de seguridad H-01 y H-02** (auditoría de seguridad del 2026-11-09), autorizadas por el responsable del proyecto en la rama `fix/HT-AUTH-01-security`: **T-48 nueva** (DEC-28, semillas solo en `development`/`test`) y **T-49 nueva** (DEC-29, `RolesGuard` con denegación por defecto e intersección de clase y método). Matriz: CA-11, RN-10, RN-14 y RN-18 agregan las tareas nuevas. H-03, H-04 y H-05 quedan como deuda técnica, sin tareas en esta corrección. Ninguna tarea existente cambia de ID ni de estado. | plan §7, §11, §12, §14 (DEC-28, DEC-29) |
 | 2026-11-09 | **T-48 y T-49 completadas** con evidencia (unit 232/232, integración 110/110 + 1 omitida, E2E 127/127; typecheck y lint OK), sin commit. `plan.md` sigue en `draft` hasta la revisión del desarrollador (DEC-28 y DEC-29). | plan §14 (DEC-28, DEC-29) |
 | 2026-11-09 | **Cierre de H-01/H-02 y DEC-30 (opción B):** **T-50 nueva y completada** (`newLine: lf` en `tsconfig.migrations.json` y prueba del compilado sin CR); T-48 agrega la prueba de proceso de `migrate:*` sin `NODE_ENV`. Normalización de checksums y variantes históricas (opción A) como deuda técnica. Validación: typecheck y lint OK; unit 232/232; integración 116/116 + 1 omitida; E2E 127/127. `plan.md` sigue en `draft` hasta la confirmación del desarrollador. | plan §7, §12, §14 (DEC-28, DEC-29, DEC-30) |
+| 2026-11-10 | **Entrega de T-48, T-49 y T-50** (`2987dab`, rama `fix/HT-AUTH-01-security`) en el **único PR** desde `feature/HT-AUTH-02` hacia `develop`, por decisión del desarrollador (HT-AUTH-02 plan DEC-16): excepción a la regla de un PR por historia. **HT-AUTH-01 sigue `in-progress`:** T-33, T-34, T-41 y T-43 continúan abiertas y no se marcan como completadas. Sin cambios de estado | Decisión del desarrollador |
