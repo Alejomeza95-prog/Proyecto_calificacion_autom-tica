@@ -1,4 +1,5 @@
 import { Controller, Get, Post, type ExecutionContext, type Type } from '@nestjs/common';
+import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Types } from 'mongoose';
@@ -7,8 +8,11 @@ import { ProblemException } from '../common/http/problem';
 import { loadAuthConfig, type AuthConfig } from '../config/auth-config';
 import { AccountStatus } from '../users/account-status';
 import { AccessTokenService } from './access-token.service';
-import { OriginProtected, Public, Roles } from './decorators';
+import { AuthController } from '../auth/auth.controller';
+import { HealthController } from '../health/health.controller';
+import { AnyActiveRole, OriginProtected, Public, Roles } from './decorators';
 import { OriginGuard, RolesGuard } from './guards';
+import { resolveRoutePolicy } from './route-policy';
 import { InstitutionScopePolicy } from './institution-scope.policy';
 import type { Principal } from './principal';
 import { Role } from './role';
@@ -179,20 +183,188 @@ describe('OriginGuard (DEC-20)', () => {
   });
 });
 
-describe('RolesGuard (DEC-11, DEC-14)', () => {
-  const guard = new RolesGuard(new Reflector());
-  const check = (handler: string, p?: Principal) =>
-    statusOf(() => guard.canActivate(httpContext(UnprotectedController, handler, { method: 'GET', ...(p ? { principal: p } : {}) })));
-  const inst = new Types.ObjectId();
+// T-49 (DEC-29): controladores de prueba para la política de RolesGuard.
+@Controller('politicas')
+class PolicyController {
+  @Get('sin-politica')
+  sinPolitica(): void {}
 
-  it('rol permitido → pasa; rol insuficiente → 403; sin principal → 401; sin @Roles → pasa', () => {
-    expect(check('admin', principal(Role.ADMIN, null))).toBeUndefined();
-    expect(check('admin', principal(Role.DOCENTE, inst))).toBe(403);
-    expect(check('admin', principal(Role.COORDINADOR, inst))).toBe(403);
-    expect(check('institucional', principal(Role.DOCENTE, inst))).toBeUndefined();
-    expect(check('admin', principal(null, null))).toBe(403);
-    expect(check('admin')).toBe(401);
-    expect(check('x', principal(Role.DOCENTE, inst))).toBeUndefined();
+  @AnyActiveRole()
+  @Get('cualquiera')
+  cualquiera(): void {}
+
+  @Roles(Role.ADMIN)
+  @AnyActiveRole()
+  @Get('contradictoria')
+  contradictoria(): void {}
+
+  @Public()
+  @Get('publica')
+  publica(): void {}
+
+  @Public()
+  @Roles(Role.ADMIN)
+  @Get('publica-con-roles')
+  publicaConRoles(): void {}
+}
+
+@Roles(Role.ADMIN)
+@Controller('admin')
+class AdminOnlyController {
+  @Get('heredada')
+  heredada(): void {}
+
+  @Roles(Role.DOCENTE)
+  @Get('metodo-docente')
+  metodoDocente(): void {}
+
+  @Roles(Role.ADMIN, Role.DOCENTE)
+  @Get('metodo-admin-docente')
+  metodoAdminDocente(): void {}
+
+  @AnyActiveRole()
+  @Get('metodo-cualquiera')
+  metodoCualquiera(): void {}
+}
+
+@AnyActiveRole()
+@Controller('general')
+class AnyRoleController {
+  @Get('heredada')
+  heredada(): void {}
+
+  @Roles(Role.ADMIN)
+  @Get('solo-admin')
+  soloAdmin(): void {}
+}
+
+@Roles(Role.COORDINADOR, Role.DOCENTE)
+@Controller('institucional')
+class InstitutionalController {
+  @Roles(Role.DOCENTE)
+  @Get('docente')
+  docente(): void {}
+
+  @Roles(Role.ADMIN)
+  @Get('admin')
+  admin(): void {}
+}
+
+describe('RolesGuard (DEC-11, DEC-14, DEC-29)', () => {
+  const guard = new RolesGuard(new Reflector());
+  const inst = new Types.ObjectId();
+  const PRINCIPALS: Readonly<Record<Role, Principal>> = {
+    ADMIN: principal(Role.ADMIN, null),
+    COORDINADOR: principal(Role.COORDINADOR, inst),
+    DOCENTE: principal(Role.DOCENTE, inst),
+  };
+  const check = (controller: Type, handler: string, p?: Principal) =>
+    statusOf(() => guard.canActivate(httpContext(controller, handler, { method: 'GET', ...(p ? { principal: p } : {}) })));
+  /** Roles del catálogo que pasan el guard en la ruta; el resto debe recibir exactamente 403. */
+  const allowed = (controller: Type, handler: string): Role[] =>
+    (Object.keys(PRINCIPALS) as Role[]).filter((rol) => {
+      const status = check(controller, handler, PRINCIPALS[rol]);
+      if (status !== undefined) expect(status).toBe(403);
+      return status === undefined;
+    });
+
+  it('rol permitido → pasa; rol insuficiente → 403; sin principal → 401; cuenta sin rol → 403', () => {
+    expect(allowed(UnprotectedController, 'admin')).toEqual([Role.ADMIN]);
+    expect(allowed(UnprotectedController, 'institucional')).toEqual([Role.COORDINADOR, Role.DOCENTE]);
+    expect(check(UnprotectedController, 'admin', principal(null, null))).toBe(403);
+    expect(check(UnprotectedController, 'admin')).toBe(401);
+  });
+
+  it('ruta protegida sin metadatos de autorización → 403 para todos, también sin principal (denegación por defecto)', () => {
+    expect(allowed(UnprotectedController, 'x')).toEqual([]);
+    expect(allowed(PolicyController, 'sinPolitica')).toEqual([]);
+    expect(check(PolicyController, 'sinPolitica')).toBe(403);
+  });
+
+  it('@AnyActiveRole() → pasa para ADMIN, COORDINADOR y DOCENTE; sin rol → 403; sin principal → 401', () => {
+    expect(allowed(PolicyController, 'cualquiera')).toEqual([Role.ADMIN, Role.COORDINADOR, Role.DOCENTE]);
+    expect(check(PolicyController, 'cualquiera', principal(null, null))).toBe(403);
+    expect(check(PolicyController, 'cualquiera')).toBe(401);
+  });
+
+  it('clase ADMIN + método DOCENTE → intersección vacía: 403 para todos (el método no amplía la clase)', () => {
+    expect(allowed(AdminOnlyController, 'metodoDocente')).toEqual([]);
+  });
+
+  it('clase ADMIN: el método hereda, restringe o declara cualquier rol, pero nunca amplía', () => {
+    expect(allowed(AdminOnlyController, 'heredada')).toEqual([Role.ADMIN]);
+    expect(allowed(AdminOnlyController, 'metodoAdminDocente')).toEqual([Role.ADMIN]);
+    expect(allowed(AdminOnlyController, 'metodoCualquiera')).toEqual([Role.ADMIN]);
+  });
+
+  it('clase @AnyActiveRole(): el método hereda o restringe; ADMIN conserva sus permisos', () => {
+    expect(allowed(AnyRoleController, 'heredada')).toEqual([Role.ADMIN, Role.COORDINADOR, Role.DOCENTE]);
+    expect(allowed(AnyRoleController, 'soloAdmin')).toEqual([Role.ADMIN]);
+  });
+
+  it('clase institucional: el método restringe a DOCENTE; un método ADMIN no se concede a nadie', () => {
+    expect(allowed(InstitutionalController, 'docente')).toEqual([Role.DOCENTE]);
+    expect(allowed(InstitutionalController, 'admin')).toEqual([]);
+  });
+
+  it('@Roles y @AnyActiveRole en el mismo nivel → política contradictoria: 403 para todos', () => {
+    expect(allowed(PolicyController, 'contradictoria')).toEqual([]);
+  });
+
+  it('rutas públicas: sin política pasan sin principal; con @Roles exigen principal (401, falla en cerrado)', () => {
+    expect(check(PolicyController, 'publica')).toBeUndefined();
+    expect(check(ProtectedController, 'login')).toBeUndefined();
+    expect(check(PolicyController, 'publicaConRoles')).toBe(401);
+    expect(allowed(PolicyController, 'publicaConRoles')).toEqual([Role.ADMIN]);
+  });
+
+  it('resolveRoutePolicy informa el motivo de cada denegación', () => {
+    const reflector = new Reflector();
+    const policy = (controller: Type, handler: string) =>
+      resolveRoutePolicy(reflector, (controller.prototype as Record<string, () => void>)[handler], controller);
+    expect(policy(PolicyController, 'sinPolitica')).toEqual({ kind: 'deny', reason: 'SIN_POLITICA' });
+    expect(policy(PolicyController, 'contradictoria')).toEqual({ kind: 'deny', reason: 'POLITICA_CONTRADICTORIA' });
+    expect(policy(AdminOnlyController, 'metodoDocente')).toEqual({ kind: 'deny', reason: 'INTERSECCION_VACIA' });
+    expect(policy(PolicyController, 'publica')).toEqual({ kind: 'public' });
+  });
+});
+
+/** Rutas (métodos con `@Get`, `@Post`, …) declaradas en un controlador. */
+function routeHandlers(controller: Type): string[] {
+  const proto = controller.prototype as Record<string, unknown>;
+  return Object.getOwnPropertyNames(proto).filter((name) => {
+    const fn = proto[name];
+    return name !== 'constructor' && typeof fn === 'function' && Reflect.getMetadata(PATH_METADATA, fn) !== undefined;
+  });
+}
+
+// T-49 (DEC-29): inventario de los controladores reales de la API. El E2E de seguridad recorre además todos
+// los controladores registrados en la aplicación.
+describe('inventario de políticas de los controladores de la API (DEC-29)', () => {
+  const reflector = new Reflector();
+  const policyOf = (controller: Type, handler: string) =>
+    resolveRoutePolicy(reflector, (controller.prototype as Record<string, () => void>)[handler], controller);
+
+  it('cada ruta declara política y ninguna combinación de clase y método es contradictoria', () => {
+    for (const controller of [AuthController, HealthController] as Type[]) {
+      const handlers = routeHandlers(controller);
+      expect(handlers.length).toBeGreaterThan(0);
+      for (const handler of handlers) {
+        expect({ ruta: `${controller.name}.${handler}`, policy: policyOf(controller, handler) }).not.toMatchObject({
+          policy: { kind: 'deny' },
+        });
+      }
+    }
+  });
+
+  it('/auth/me y /auth/logout admiten cualquier cuenta ACTIVA; el resto de /auth y /health son públicas', () => {
+    const everyRole = { kind: 'roles', roles: [Role.ADMIN, Role.COORDINADOR, Role.DOCENTE], public: false };
+    expect(policyOf(AuthController, 'me')).toEqual(everyRole);
+    expect(policyOf(AuthController, 'logout')).toEqual(everyRole);
+    for (const handler of routeHandlers(AuthController).filter((h) => h !== 'me' && h !== 'logout')) {
+      expect(policyOf(AuthController, handler)).toEqual({ kind: 'public' });
+    }
+    expect(policyOf(HealthController, 'check')).toEqual({ kind: 'public' });
   });
 });
 

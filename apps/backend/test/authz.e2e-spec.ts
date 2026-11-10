@@ -5,7 +5,7 @@ import { IsString, MaxLength } from 'class-validator';
 import { Types, type Connection } from 'mongoose';
 import { AuthController } from '../src/auth/auth.controller';
 import { AuthModule } from '../src/auth/auth.module';
-import { CurrentPrincipal, Roles } from '../src/authz/decorators';
+import { AnyActiveRole, CurrentPrincipal, Public, Roles } from '../src/authz/decorators';
 import { InstitutionScopePolicy } from '../src/authz/institution-scope.policy';
 import type { Principal } from '../src/authz/principal';
 import { Role } from '../src/authz/role';
@@ -59,12 +59,26 @@ class ScopeTestController {
     return { ok: true };
   }
 
+  /** Sin política de roles: denegada para todos (DEC-29). */
+  @Get('sin-politica')
+  sinPolitica(): { ok: true } {
+    return { ok: true };
+  }
+
+  @AnyActiveRole()
+  @Get('cualquiera')
+  cualquiera(): { ok: true } {
+    return { ok: true };
+  }
+
+  @AnyActiveRole()
   @Get('recursos')
   async list(@CurrentPrincipal() principal: Principal): Promise<string[]> {
     const docs = await this.recursos.find(this.scope.scoped(principal, {})).sort({ nombre: 1 }).toArray();
     return docs.map((d) => d.nombre);
   }
 
+  @AnyActiveRole()
   @Get('recursos/:id')
   async get(@CurrentPrincipal() principal: Principal, @Param('id') id: string): Promise<{ nombre: string }> {
     const doc = await this.recursos.findOne(this.scope.scoped(principal, { _id: parseId(id) }));
@@ -83,7 +97,39 @@ class ScopeTestController {
   }
 }
 
-@Module({ imports: [AuthModule], controllers: [ScopeTestController] })
+/** Clase solo ADMIN (DEC-29): los métodos restringen o heredan, nunca amplían. */
+@Roles(Role.ADMIN)
+@Controller('prueba-admin')
+class AdminClassTestController {
+  @Get('heredada')
+  heredada(): { ok: true } {
+    return { ok: true };
+  }
+
+  @Roles(Role.DOCENTE)
+  @Get('metodo-docente')
+  metodoDocente(): { ok: true } {
+    return { ok: true };
+  }
+
+  @AnyActiveRole()
+  @Get('metodo-cualquiera')
+  metodoCualquiera(): { ok: true } {
+    return { ok: true };
+  }
+}
+
+/** Ruta pública de prueba sin política de roles: sigue siendo pública (DEC-29). */
+@Public()
+@Controller('prueba-publica')
+class PublicTestController {
+  @Get()
+  publica(): { ok: true } {
+    return { ok: true };
+  }
+}
+
+@Module({ imports: [AuthModule], controllers: [ScopeTestController, AdminClassTestController, PublicTestController] })
 class ScopeTestModule {}
 
 describe('autorización y alcance institucional (T-19, e2e)', () => {
@@ -158,6 +204,48 @@ describe('autorización y alcance institucional (T-19, e2e)', () => {
     }
     const forbidden = await get('/api/v1/prueba/solo-admin', tokens.docenteA);
     expect(forbidden.body).toMatchObject({ type: 'urn:omr-preicfes:problema:acceso-denegado', status: 403 });
+  });
+
+  it('T-49/DEC-29: ruta sin política → 403 para todos; @AnyActiveRole() → 200 para todos', async () => {
+    for (const who of ['admin', 'coordA', 'docenteA', 'docenteB']) {
+      const denied = await get('/api/v1/prueba/sin-politica', tokens[who]);
+      expect({ who, status: denied.status }).toEqual({ who, status: 403 });
+      expect(denied.body).toMatchObject({ type: 'urn:omr-preicfes:problema:acceso-denegado', status: 403 });
+      const any = await get('/api/v1/prueba/cualquiera', tokens[who]);
+      expect({ who, status: any.status }).toEqual({ who, status: 200 });
+    }
+    await get('/api/v1/prueba/sin-politica').expect(401);
+  });
+
+  it('T-49/DEC-29: clase ADMIN + método DOCENTE → 403 para todos; los métodos heredados o @AnyActiveRole() solo admiten ADMIN', async () => {
+    const cases: [string, string, number][] = [
+      ['/api/v1/prueba-admin/metodo-docente', 'docenteA', 403],
+      ['/api/v1/prueba-admin/metodo-docente', 'admin', 403],
+      ['/api/v1/prueba-admin/metodo-docente', 'coordA', 403],
+      ['/api/v1/prueba-admin/heredada', 'admin', 200],
+      ['/api/v1/prueba-admin/heredada', 'coordA', 403],
+      ['/api/v1/prueba-admin/heredada', 'docenteA', 403],
+      ['/api/v1/prueba-admin/metodo-cualquiera', 'admin', 200],
+      ['/api/v1/prueba-admin/metodo-cualquiera', 'coordA', 403],
+      ['/api/v1/prueba-admin/metodo-cualquiera', 'docenteA', 403],
+    ];
+    for (const [path, who, status] of cases) {
+      const res = await get(path, tokens[who]);
+      expect({ path, who, status: res.status }).toEqual({ path, who, status });
+    }
+  });
+
+  it('T-49/DEC-29: /auth/me y /auth/logout siguen disponibles para ADMIN, COORDINADOR y DOCENTE; las rutas públicas siguen públicas', async () => {
+    for (const who of ['admin', 'coordA', 'docenteA']) {
+      const res = await get('/api/v1/auth/me', tokens[who]);
+      expect({ who, status: res.status }).toEqual({ who, status: 200 });
+    }
+    await h.http().get('/api/v1/prueba-publica').expect(200, { ok: true });
+    await h.http().get('/api/v1/health').expect(200, { status: 'ok' });
+    const persona = await h.createUser({ rol: Role.COORDINADOR, institucionId: instA });
+    const { accessToken } = await h.login(persona);
+    await h.http().post('/api/v1/auth/logout').set('Origin', ORIGIN).set('Authorization', bearer(accessToken)).expect(204);
+    await get('/api/v1/auth/me', accessToken).expect(401);
   });
 
   it('recurso de otra institución → 404 idéntico a uno inexistente (DEC-14, RN-17)', async () => {
