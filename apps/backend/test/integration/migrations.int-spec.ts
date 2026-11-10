@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { AUTH_INDEXES } from '../../migrations/001-auth-indices';
 import { SEED_ACCOUNTS } from '../../migrations/002-seed-roles-dev';
 import {
+  MigrationEnvironmentError,
   MigrationIntegrityError,
   MigrationRunner,
   type MigrationDefinition,
@@ -131,6 +132,44 @@ describe('migraciones (T-38, T-05, T-04)', () => {
       /production/,
     );
     await expect(seed.up({ db: testDb.db, nodeEnv: 'test', env: {} })).rejects.toThrow(/SEED_DEV_PASSWORD/);
+  });
+
+  it.each(['development', 'test'])('T-48/DEC-28: con NODE_ENV=%s el runner aplica el seed y crea el ADMIN de desarrollo', async (nodeEnv) => {
+    expect(await runner(testDb, migrations, nodeEnv).up()).toEqual(['001-auth-indices', '002-seed-roles-dev']);
+    expect(await testDb.db.collection('usuarios').countDocuments({ rol: 'ADMIN', seed: true })).toBe(1);
+    expect(await testDb.db.collection<{ _id: string }>('migraciones').countDocuments({ _id: '002-seed-roles-dev' })).toBe(1);
+  });
+
+  it.each(['staging', 'production', 'prod', 'Development'])(
+    'T-48/DEC-28: con NODE_ENV=%s el runner omite el seed: sin usuarios, sin ADMIN y sin registro',
+    async (nodeEnv) => {
+      expect(await runner(testDb, migrations, nodeEnv).up()).toEqual(['001-auth-indices']);
+      expect(await testDb.db.collection('usuarios').countDocuments()).toBe(0);
+      expect(await testDb.db.collection('usuarios').countDocuments({ rol: 'ADMIN' })).toBe(0);
+      expect(await testDb.db.collection<{ _id: string }>('migraciones').countDocuments({ _id: '002-seed-roles-dev' })).toBe(0);
+    },
+  );
+
+  it('T-48/DEC-28: sin NODE_ENV el runner no se construye y no crea colecciones', async () => {
+    expect(() => runner(testDb, migrations, '')).toThrow(MigrationEnvironmentError);
+    expect(await testDb.db.listCollections().toArray()).toEqual([]);
+  });
+
+  it('T-48/DEC-28: seed aplicado y luego NODE_ENV=staging → advertencia, sin modificar ni borrar datos', async () => {
+    await runner(testDb, migrations, 'test').up();
+    const before = await snapshot(testDb);
+    const warnings: string[] = [];
+    const staging = new MigrationRunner(
+      { db: testDb.db, nodeEnv: 'staging', env: { SEED_DEV_PASSWORD: SEED_PASSWORD } },
+      migrations,
+      () => undefined,
+      (m) => warnings.push(m),
+    );
+    expect(await staging.up()).toEqual([]);
+    await staging.status();
+    expect(warnings).toHaveLength(2);
+    expect(warnings[0]).toMatch(/002-seed-roles-dev consta aplicada con NODE_ENV=staging/);
+    expect(await snapshot(testDb)).toBe(before);
   });
 
   it('T-38: en producción el runner omite el seed y no lo registra', async () => {
