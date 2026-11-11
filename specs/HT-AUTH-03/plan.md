@@ -26,7 +26,8 @@ Se agregan al backend NestJS cuatro módulos: `admin-users` (aprobación de cuen
 | API NestJS | `apps/backend/src/manual-review/` | Nuevo: esquema, DTO, regla y servicio de verificación (endpoint en OMR-002, DEC-07) |
 | API NestJS | `apps/backend/src/audit/` | Nuevo `AdminAuditService` + esquema `auditoria_admin` |
 | API NestJS | `apps/backend/src/common/http/problem.ts` | Nuevo `ProblemType.CONFLICTO` (`conflicto`, 409) |
-| Migraciones | `apps/backend/migrations/003-ht-auth-03-indices.ts` | Índices de §4 |
+| Migraciones | `apps/backend/migrations/003-ht-auth-03-indices.ts`, `004-seed-instituciones-dev.ts` | Índices de §4; siembra de instituciones solo de desarrollo (DEC-03) |
+| CLI | `apps/backend/src/cli/crear-institucion.ts` (`pnpm instituciones:crear --nombre`) | Alta idempotente de instituciones en producción (DEC-03) |
 | Frontend React | `apps/frontend/src/app/` | `AppShell` y rutas privadas nuevas (`routes.ts`, `router.tsx`, `PRIVATE_ROUTES`) |
 | Frontend React | `apps/frontend/src/features/navigation/` | `Sidebar`, `nav-items.ts` |
 | Frontend React | `apps/frontend/src/features/admin-users/` | Panel de usuarios |
@@ -122,9 +123,9 @@ Validador de documento: si `estado === 'PUBLICADA'`, ningún elemento de `respue
 |---|---|---|---|---|---|
 | `_id` | ObjectId | sí | | | no |
 | `schemaVersion` | Number | sí | `default: 1` | | no |
-| `evento` | String | sí | `enum: ['CUENTA_APROBADA','CLAVE_CREADA','CLAVE_ACTUALIZADA','CLAVE_PUBLICADA','CLAVE_ELIMINADA','MARCA_VERIFICADA']` | | no |
+| `evento` | String | sí | `enum: ['CUENTA_APROBADA','PRUEBA_CREADA','CLAVE_CREADA','CLAVE_ACTUALIZADA','CLAVE_PUBLICADA','CLAVE_ELIMINADA','MARCA_VERIFICADA']` | | no |
 | `actor_id` | ObjectId | sí | | `Usuario` | no |
-| `recurso_tipo` | String | sí | `enum: ['usuario','clave_respuesta','resolucion_manual']` | | no |
+| `recurso_tipo` | String | sí | `enum: ['usuario','prueba','clave_respuesta','resolucion_manual']` | | no |
 | `recurso_id` | ObjectId | sí | | | no |
 | `institucion_id` | ObjectId | no | `default: null` | `Institucion` | no |
 | `detalle` | Mixed | no | solo campos no personales (p. ej. `{rol}`, `{estado_anterior, estado_nuevo}`, `{cantidad_preguntas}`) | | no |
@@ -181,6 +182,7 @@ Runner `MigrationRunner` (`HT-AUTH-01/DEC-12`).
 | Script | Colección | `schemaVersion` origen → destino | Acción | Reversión | Idempotente |
 |---|---|---|---|---|---|
 | `003-ht-auth-03-indices.ts` | `usuarios`, `instituciones`, `pruebas`, `claves_respuesta`, `auditoria_admin` | — (colecciones nuevas en v1; `usuarios` sin cambio) | Crear los índices de §4 excepto los de `resoluciones_manuales` | `dropIndex` de cada índice creado | sí (`createIndex` con la misma especificación) |
+| `004-seed-instituciones-dev.ts` (solo desarrollo y pruebas) | `instituciones` | — → 1 | Upsert de las instituciones A y B con los ObjectId que ya usan las cuentas de `002-seed-roles-dev`; se niega en producción | Borra los documentos con `seed: true` | sí (`$setOnInsert` por `_id`) |
 | (en OMR-002) | `resoluciones_manuales` | — → 1 | Índices de §3.6 | `dropIndex` | sí |
 
 ## 8. Endpoints
@@ -339,3 +341,4 @@ Integración contra MongoDB 7 de Compose con base aislada por suite (`HT-AUTH-01
 |---|---|---|---|
 | 2026-11-11 | Creación con `/sdd-spec` | spec §14 | — → draft |
 | 2026-11-11 | Decisiones DEC-01..DEC-09 aprobadas; `SESIONES` y `MAX_PREGUNTAS` fijados; roles de §8 concretados; endpoint de verificación e índices de `resoluciones_manuales` trasladados a OMR-002; DT-09 y DT-04 dejan de bloquear; §15 resuelta; checklist §16 completo | spec §12 y §14 (decisión de JhonDc) | draft → ready |
+| 2026-11-11 | **Ajustes de implementación** (`/sdd-implement`, sin cambio de comportamiento de la spec): (1) §3.5 agrega el evento `PRUEBA_CREADA` y el recurso `prueba` (el alta de pruebas de DEC-04 también se audita, RN-17); (2) §2.1 y §7: migración `004-seed-instituciones-dev` y comando `instituciones:crear` materializan la «siembra controlada» de DEC-03; (3) aprobar exige una institución existente y activa (400 `institucionVigente`), y crear una prueba con una institución ajena responde 404 (RN-13); (4) `ManualReviewService`: una marca ya verificada no se modifica (409), para que la confirmación de RN-16 no cambie en silencio; (5) frontend: `/inicio` pasa a mostrarse dentro de `AppShell` y el cierre de sesión de HT-AUTH-02 se mueve al menú lateral (CA-04); las rutas nuevas viven en `APP_ROUTES`, separadas de `ROUTES` de autenticación; el controlador de sesión expone `request` para `/api/v1` sin sacar el token (HT-AUTH-02 RN-02); (6) pruebas: el arnés E2E acepta la lista de migraciones y `migrations.int-spec.ts` (HT-AUTH-01) se acota a 001 y 002. Pendiente de confirmación del responsable en la revisión del PR | Implementación de HT-AUTH-03 | ready → ready |

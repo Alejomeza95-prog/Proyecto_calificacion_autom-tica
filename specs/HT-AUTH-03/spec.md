@@ -1,7 +1,7 @@
 ---
 id: HT-AUTH-03
 title: Administración de cuentas, navegación principal, claves de respuesta y verificación manual
-status: ready            # draft | ready | in-progress | in-review | done
+status: in-progress      # draft | ready | in-progress | in-review | done
 owner: JhonDc
 branch: feature/HT-AUTH-03
 updated: 2026-11-11
