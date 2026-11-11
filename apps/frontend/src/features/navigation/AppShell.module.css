@@ -1,0 +1,198 @@
+/* Estructura de las pantallas privadas (HT-AUTH-03 CA-04, CA-05). Usa los tokens de app/global.css. */
+.shell {
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.topbar {
+  display: none;
+}
+
+.brand {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--step-3);
+  height: 100vh;
+  height: 100dvh;
+  padding: var(--step-3) var(--step-2);
+  overflow-y: auto;
+  background: var(--panel);
+  color: var(--panel-ink);
+}
+
+.sidebarBrand {
+  padding-inline: 0.75rem;
+}
+
+.user {
+  padding: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: var(--radius-control);
+}
+
+.userName {
+  margin: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.userRole {
+  margin: 0;
+  color: var(--panel-muted);
+  font-size: 0.875rem;
+}
+
+.navList {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-control);
+  color: var(--panel-muted);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 120ms var(--ease-out);
+}
+
+.navLink:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--panel-ink);
+}
+
+/* Opción actual: fondo y marca lateral, no solo color. */
+.navLink[aria-current='page'] {
+  background: var(--surface);
+  box-shadow: inset 4px 0 0 var(--review);
+  color: var(--primary-deep);
+}
+
+.navLink:focus-visible,
+.menuButton:focus-visible {
+  outline: 3px solid var(--panel-ink);
+  outline-offset: 2px;
+}
+
+.logout {
+  margin-top: auto;
+}
+
+.logout button {
+  margin-top: var(--step-1);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.4);
+}
+
+.logout button:hover,
+.logout button[aria-disabled] {
+  background: rgb(255 255 255 / 0.1);
+}
+
+.logout button:focus-visible {
+  outline-color: var(--panel-ink);
+}
+
+.main {
+  min-width: 0;
+  padding: var(--step-4) var(--step-3);
+}
+
+.content {
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.title {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.title:focus {
+  outline: none;
+}
+
+.description {
+  max-width: 62ch;
+  overflow-wrap: anywhere;
+  margin-top: var(--step-1);
+  color: var(--ink-muted);
+}
+
+.menuButton {
+  min-height: 2.75rem;
+  padding-inline: var(--step-2);
+  border: 1px solid rgb(255 255 255 / 0.5);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--panel-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Pantallas angostas: barra superior y menú desplegable (CA-05). */
+@media (max-width: 56rem) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--step-2);
+    padding: 0.625rem var(--step-2);
+    background: var(--panel);
+    color: var(--panel-ink);
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 3.75rem 0 0 0;
+    z-index: 1;
+    height: auto;
+    display: none;
+  }
+
+  .sidebar[data-open='true'] {
+    display: flex;
+  }
+
+  .sidebarBrand {
+    display: none;
+  }
+
+  .main {
+    padding: var(--step-3) var(--step-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navLink {
+    transition: none;
+  }
+}

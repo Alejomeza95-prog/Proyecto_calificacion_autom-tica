@@ -1,5 +1,5 @@
 import * as authApi from '../api/auth-api.ts';
-import type { AccessTokenSource } from '../api/http-client.ts';
+import { API_BASE_PATH, sendProtected, type AccessTokenSource, type RequestOptions } from '../api/http-client.ts';
 import { isApiError, isRecord } from '../api/problem.ts';
 import type { AccessTokenResponse, LoginRequest, MeResponse } from '../api/types.ts';
 
@@ -15,6 +15,9 @@ export type SessionSnapshot =
   | { readonly estado: 'autenticada'; readonly usuario: MeResponse }
   | { readonly estado: 'no-disponible' };
 
+/** Solicitud autenticada a `/api/v1` (HT-AUTH-03); el token lo agrega el controlador. */
+export type ApiRequest = (path: string, options: Omit<RequestOptions, 'bearer'>) => Promise<unknown>;
+
 /** Interfaz pública: expone el estado de la sesión y nunca el token de acceso (RN-02). */
 export interface SessionController {
   subscribe(listener: () => void): () => void;
@@ -27,6 +30,11 @@ export interface SessionController {
   login(credentials: LoginRequest): Promise<void>;
   /** Rechaza con `ApiError` si no se puede confirmar el cierre: la sesión sigue activa (plan §2.4). */
   logout(): Promise<void>;
+  /**
+   * Solicitud autenticada a la API (HT-AUTH-03). Renueva una vez ante 401; si la sesión ya no se puede
+   * renovar, la termina como perdida y propaga el error.
+   */
+  request: ApiRequest;
   dispose(): void;
 }
 
@@ -156,6 +164,18 @@ export function createSessionController(): SessionController {
       }
       endSession('cierre-de-sesion');
       channel?.postMessage({ tipo: 'logout' });
+    },
+
+    async request(path, options) {
+      const startedAt = epoch;
+      try {
+        return await sendProtected(path, options, tokens, API_BASE_PATH);
+      } catch (error) {
+        if (isApiError(error, 'no-autenticado') && startedAt === epoch && snapshot.estado === 'autenticada') {
+          endSession('sesion-perdida');
+        }
+        throw error;
+      }
     },
 
     dispose() {

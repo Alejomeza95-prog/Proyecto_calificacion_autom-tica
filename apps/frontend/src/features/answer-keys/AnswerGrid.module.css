@@ -1,0 +1,133 @@
+/* Grilla de respuestas de la clave (HT-AUTH-03 CA-06). */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: 0.5rem;
+  margin: var(--step-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+/* Pregunta faltante al publicar: borde, fondo y texto, no solo color. */
+.row[data-missing] {
+  border: 2px solid var(--danger);
+  background: var(--danger-tint);
+}
+
+.fieldset {
+  margin: 0;
+  padding: 0.5rem 0.75rem 0.625rem;
+  border: 0;
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.missingTag {
+  color: var(--danger-ink);
+}
+
+.options {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+  margin-top: 0.375rem;
+}
+
+.option {
+  position: relative;
+  display: inline-flex;
+}
+
+.radio {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--field-border);
+  border-radius: 50%;
+  background: var(--surface);
+  font-weight: 700;
+  transition:
+    background-color 120ms var(--ease-out),
+    color 120ms var(--ease-out);
+}
+
+.option:hover .letter {
+  border-color: var(--primary);
+}
+
+/* Burbuja marcada: relleno, como en la hoja OMR. */
+.radio:checked + .letter {
+  border-color: var(--primary-deep);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.radio:focus-visible + .letter {
+  outline: var(--ring);
+  outline-offset: 2px;
+}
+
+.fieldset:disabled .radio {
+  cursor: default;
+}
+
+.fieldset:disabled .letter {
+  border-color: var(--line);
+}
+
+.fieldset:disabled .radio:checked + .letter {
+  background: var(--ink-muted);
+  border-color: var(--ink-muted);
+}
+
+.clear {
+  margin-left: auto;
+  min-height: 2.25rem;
+  padding-inline: 0.5rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clear:hover {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.clear:focus-visible {
+  outline: var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .letter {
+    transition: none;
+  }
+}

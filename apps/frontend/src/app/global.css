@@ -79,3 +79,16 @@ input {
   caret-color: var(--primary);
   accent-color: var(--primary);
 }
+
+/* Texto solo para lectores de pantalla (HT-AUTH-03: encabezados de columnas de acciones, leyendas). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

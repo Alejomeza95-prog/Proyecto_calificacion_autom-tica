@@ -1,0 +1,47 @@
+/* Casilla «Verificada» (HT-AUTH-03 CA-13). */
+.wrapper {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.625rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.wrapper[data-checked] {
+  border-color: var(--success-line);
+  background: var(--success-tint);
+}
+
+.checkbox {
+  width: 1.375rem;
+  height: 1.375rem;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.checkbox:disabled {
+  cursor: not-allowed;
+}
+
+.checkbox:focus-visible {
+  outline: var(--ring);
+  outline-offset: 2px;
+}
+
+.label {
+  font-weight: 650;
+}
+
+.checkbox:disabled + .label {
+  color: var(--ink-muted);
+}
+
+.hint {
+  grid-column: 2;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}

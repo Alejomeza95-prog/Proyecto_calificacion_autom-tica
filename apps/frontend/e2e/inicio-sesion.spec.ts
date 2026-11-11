@@ -84,7 +84,8 @@ test.describe('Inicio y cierre de sesión reales (CA-01, CA-07, CA-08)', () => {
     expect(request.postDataJSON()).toEqual({ correo, password: TEST_PASSWORD });
     expect((await request.allHeaders())['origin']).toBe(APP_ORIGIN);
     await expect(page.getByText('Tu rol: Administrador')).toBeVisible();
-    await expect(page.getByRole('navigation')).toHaveCount(0);
+    // Desde HT-AUTH-03 (CA-04) /inicio se muestra dentro del menú lateral, que incluye el cierre de sesión.
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
 
     const requests = countRequests(page);
     await page.reload();
@@ -162,7 +163,8 @@ test.describe('Inicio y cierre de sesión reales (CA-01, CA-07, CA-08)', () => {
     // Mientras llega el módulo diferido solo existe el título de la pantalla de espera.
     await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
-    await page.keyboard.press('Tab');
+    // Desde HT-AUTH-03 el cierre de sesión es el último control del menú lateral, justo antes del contenido.
+    await page.keyboard.press('Shift+Tab');
     await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('status')).toHaveText('Tu sesión se cerró.');
@@ -574,6 +576,9 @@ test.describe('Accesibilidad y adaptación (CA-12, RNF-01)', () => {
     },
     'sesión cerrada': async (page) => {
       await loginThroughUi(page, await createActiveAccount('axe'));
+      // En pantallas angostas el cierre de sesión está dentro del menú desplegable (HT-AUTH-03 CA-05).
+      const menu = page.getByRole('button', { name: 'Menú' });
+      if (await menu.isVisible()) await menu.click();
       await page.getByRole('button', { name: 'Cerrar sesión' }).click();
       await expect(page.getByRole('status')).toHaveText('Tu sesión se cerró.');
     },

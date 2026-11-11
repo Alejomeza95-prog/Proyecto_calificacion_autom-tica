@@ -1,48 +1,41 @@
-import type { FormEvent } from 'react';
-import { SCREEN_TITLES } from '../../../app/routes.ts';
-import type { Role } from '../api/types.ts';
-import { AuthPage } from '../components/AuthPage.tsx';
-import { StatusMessage } from '../components/StatusMessage.tsx';
-import { SubmitButton } from '../components/SubmitButton.tsx';
-import { useApiAction } from '../forms/use-api-action.ts';
-import { useResultFocus } from '../forms/use-result-focus.ts';
+import { Link } from 'react-router';
+import { APP_ROUTES, SCREEN_TITLES } from '../../../app/routes.ts';
+import { AppShell } from '../../navigation/AppShell.tsx';
+import page from '../../navigation/page.module.css';
+import { hasRole, ROLES_LECTURA_CLAVES, ROLES_USUARIOS } from '../../navigation/permissions.ts';
+import { ROLE_LABELS } from '../../navigation/role-labels.ts';
 import { useSession } from '../session/session-context.ts';
-import styles from './pages.module.css';
 
-const ROLE_LABELS: Readonly<Record<Role, string>> = {
-  ADMIN: 'Administrador',
-  COORDINADOR: 'Coordinador',
-  DOCENTE: 'Docente',
-};
-
-/** Vista básica: solo datos de `GET /api/v1/auth/me`. La protege `RequireAuth`. */
+/**
+ * Vista de inicio: solo datos de `GET /api/v1/auth/me`. La protege `RequireAuth`. Desde HT-AUTH-03 se muestra
+ * dentro de `AppShell`, cuyo menú lateral incluye el cierre de sesión.
+ */
 export function HomePage() {
-  const { session, logout } = useSession();
-  const { pending, blocked, error, run } = useApiAction();
-  const errorRef = useResultFocus<HTMLDivElement>(error);
-
+  const { session } = useSession();
   if (session.estado !== 'autenticada') return null;
   const { nombre, rol } = session.usuario;
 
-  function handleLogout(event: FormEvent) {
-    event.preventDefault();
-    void run(logout);
-  }
-
   return (
-    <AuthPage flow="acceso" title={SCREEN_TITLES.inicio} description={`Hola, ${nombre}.`}>
-      {rol && <p className={styles.note}>Tu rol: {ROLE_LABELS[rol]}</p>}
-      <form onSubmit={handleLogout} noValidate>
-        {error && (
-          <StatusMessage ref={errorRef} tone="error">
-            {/* Sin confirmación del backend no se afirma que se cerró (plan §2.4). */}
-            No pudimos confirmar el cierre: tu sesión sigue abierta. Inténtalo de nuevo.
-          </StatusMessage>
-        )}
-        <SubmitButton pending={pending || blocked} pendingLabel={blocked ? 'Espera para reintentar' : 'Cerrando sesión…'}>
-          Cerrar sesión
-        </SubmitButton>
-      </form>
-    </AuthPage>
+    <AppShell title={SCREEN_TITLES.inicio} description={`Hola, ${nombre}.`}>
+      <section className={page.panel} aria-label="Tu cuenta">
+        {rol && <p>Tu rol: {ROLE_LABELS[rol]}</p>}
+        <ul className={page.stack} style={{ marginTop: 'var(--step-2)', paddingLeft: '1.25rem' }}>
+          {hasRole(rol, ROLES_LECTURA_CLAVES) && (
+            <li>
+              <Link className={page.link} to={APP_ROUTES.claves}>
+                Registrar o consultar claves de respuesta
+              </Link>
+            </li>
+          )}
+          {hasRole(rol, ROLES_USUARIOS) && (
+            <li>
+              <Link className={page.link} to={APP_ROUTES.usuarios}>
+                Aprobar cuentas pendientes
+              </Link>
+            </li>
+          )}
+        </ul>
+      </section>
+    </AppShell>
   );
 }
