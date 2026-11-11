@@ -1,7 +1,7 @@
 ---
 id: HT-AUTH-03
 title: Administración de cuentas, navegación principal, claves de respuesta y verificación manual
-status: draft            # draft | ready | in-progress | in-review | done
+status: ready            # draft | ready | in-progress | in-review | done
 owner: JhonDc
 branch: feature/HT-AUTH-03
 updated: 2026-11-11
@@ -11,7 +11,7 @@ updated: 2026-11-11
 
 > **spec.md describe QUÉ se construye y POR QUÉ.** El CÓMO (colecciones, índices, endpoints, contratos, pruebas) va en `plan.md`.
 > Fuente: requisitos aportados por el desarrollador el 2026-11-11 (§14). Generado por `/sdd-spec` junto con `plan.md` y `tasks.md`, en estado `draft`. Solo el desarrollador responsable cambia el estado a `ready`, tras revisar el checklist §13.
-> Las reglas marcadas *(propuesta)* no vienen de los requisitos aportados: completan un vacío y deben confirmarse (ver §12) antes de marcar `ready`.
+> Las reglas marcadas *(confirmada)* no venían en los requisitos aportados: eran propuestas que el desarrollador aprobó el 2026-11-11 (§12, §14).
 
 ## 1. Objetivo
 Como **administrador** de OMR-PreICFES, quiero aprobar las cuentas que esperan habilitación y navegar el sistema desde un menú lateral; como **responsable académico**, quiero registrar, editar y publicar las claves de respuesta de cada prueba por materia, y confirmar con una casilla «Verificada» las marcas dudosas que el sistema OMR envía a revisión manual, para que solo personas habilitadas operen el sistema y la calificación se base en claves completas y lecturas confirmadas.
@@ -40,9 +40,9 @@ Como **administrador** de OMR-PreICFES, quiero aprobar las cuentas que esperan h
 
 ### Fuera de alcance
 - Rechazar, bloquear, desactivar o reactivar cuentas; cambiar el rol de una cuenta ya ACTIVA; invitaciones (`HT-AUTH-01/DEC-22`).
-- Administración completa de instituciones (DT-09) y de pruebas más allá de lo mínimo para seleccionarlas (ver §12).
-- Versionado de claves publicadas (HU-EVAL-002), comparación con las respuestas (HU-EVAL-003), ponderación y puntajes (HU-EVAL-004/005).
-- Producción de lecturas OMR, detección de marcas dudosas y la cola de revisión manual completa (OMR-002). Esta historia entrega la casilla y su contrato; su persistencia real depende de OMR-002 (§4).
+- Administración completa de instituciones (DT-09): aquí solo hay un catálogo mínimo de consulta, con altas por siembra controlada. De las pruebas solo se incluyen el listado y el alta mínima.
+- Corrección y versionado de claves publicadas (HU-EVAL-002), comparación con las respuestas (HU-EVAL-003), ponderación y puntajes (HU-EVAL-004/005).
+- Producción de lecturas OMR, detección de marcas dudosas, la cola de revisión manual y el endpoint que guarda la verificación (OMR-002). Esta historia entrega la casilla, su regla y su servicio, probados con datos de prueba (§4).
 - Identidad visual global (HU-UX-001).
 
 ### Supuestos
@@ -51,15 +51,15 @@ Como **administrador** de OMR-PreICFES, quiero aprobar las cuentas que esperan h
 
 ## 4. Dependencias funcionales
 - **HT-AUTH-01 / HT-AUTH-02** (en `develop`): cuentas, roles, guards, sesión y rutas privadas.
-- **Instituciones (DT-09):** aprobar una cuenta COORDINADOR o DOCENTE exige una institución; no existe catálogo. Bloquea CA-02 (ver §12).
-- **Pruebas:** la clave se asocia a una prueba seleccionable; no existe catálogo. Bloquea CA-06 (ver §12).
-- **OMR-002 (lectura de burbujas y ambigüedad):** fuente de las marcas dudosas. Sin ella, la casilla «Verificada» solo puede probarse con datos de prueba (CA-13).
+- **Instituciones (DT-09):** aprobar una cuenta COORDINADOR o DOCENTE exige una institución. Esta historia crea un catálogo mínimo de consulta, alimentado por siembra controlada (§12, resuelta).
+- **Pruebas:** la clave se asocia a una prueba seleccionable. Esta historia crea un catálogo mínimo por institución, con listado y alta (§12, resuelta).
+- **OMR-002 (lectura de burbujas y ambigüedad):** fuente de las marcas dudosas. Aquí la casilla «Verificada» se prueba con datos de prueba; el guardado real de la verificación se integra en OMR-002 (CA-13).
 
 ## 5. Reglas de negocio e invariantes
 **Panel de usuarios**
-- **RN-01:** solo un ADMIN con cuenta ACTIVA puede consultar las cuentas pendientes y aprobarlas (HT-AUTH-01 §8: «un ADMIN ACTIVO aprueba las cuentas en PENDIENTE_APROBACION»). Si un COORDINADOR también aprueba queda abierto (§12).
+- **RN-01:** solo un ADMIN con cuenta ACTIVA puede consultar las cuentas pendientes y aprobarlas (HT-AUTH-01 §8: «un ADMIN ACTIVO aprueba las cuentas en PENDIENTE_APROBACION»). Un COORDINADOR no aprueba cuentas (§12, resuelta).
 - **RN-02:** la aprobación solo procede sobre una cuenta en PENDIENTE_APROBACION y la deja ACTIVA, con un rol y una institución coherentes (HT-AUTH-01 RN-15). Una cuenta en cualquier otro estado no se aprueba.
-- **RN-03** *(propuesta)*: la aprobación asigna solo roles institucionales (COORDINADOR o DOCENTE), nunca ADMIN, por analogía con `HT-AUTH-01/DEC-22`. Nadie aprueba ni asigna rol a su propia cuenta (`HT-AUTH-01/DEC-11`).
+- **RN-03** *(confirmada)*: la aprobación asigna solo roles institucionales (COORDINADOR o DOCENTE), nunca ADMIN, por analogía con `HT-AUTH-01/DEC-22`. Nadie aprueba ni asigna rol a su propia cuenta (`HT-AUTH-01/DEC-11`).
 - **RN-04:** si dos administradores aprueban la misma cuenta a la vez, solo una aprobación tiene efecto; la otra recibe un aviso de que la cuenta ya no está pendiente.
 
 **Menú lateral**
@@ -68,13 +68,13 @@ Como **administrador** de OMR-PreICFES, quiero aprobar las cuentas que esperan h
 **Claves de respuesta**
 - **RN-06:** la materia de una clave es una de MAT, CN, CC, LC o ING.
 - **RN-07:** una clave se identifica por prueba + fecha + sesión + materia. No puede haber dos claves con la misma combinación en la misma institución.
-- **RN-08:** la cantidad de preguntas de la materia es un entero positivo y determina el número de filas de la grilla (una fila por pregunta, numeradas desde 1). El límite superior está abierto (§12).
+- **RN-08:** la persona que registra la clave indica la cantidad de preguntas de la materia: un entero entre 1 y 100. Esa cantidad determina el número de filas de la grilla (una fila por pregunta, numeradas desde 1).
 - **RN-09:** cada respuesta de la clave es exactamente una de A, B, C o D. Los estados de lectura BLANK, MULTIPLE y UNCERTAIN no son valores válidos de una clave.
-- **RN-10:** una clave tiene estado **Borrador** o **Publicada**. Una clave nueva nace en Borrador. En Borrador se puede guardar incompleta *(propuesta)* y editar libremente (respuestas y cantidad de preguntas). **Publicar** exige que todas las preguntas tengan respuesta.
-- **RN-11:** una clave Publicada no se modifica directamente. El mecanismo para corregirla (volver a Borrador o crear una nueva versión) está abierto (§12; relacionado con HU-EVAL-002).
-- **RN-12** *(propuesta)*: solo se elimina una clave en Borrador; una Publicada no se elimina.
+- **RN-10:** una clave tiene estado **Borrador** o **Publicada**. Una clave nueva nace en Borrador. En Borrador se puede guardar incompleta *(confirmada)* y editar libremente (respuestas y cantidad de preguntas). **Publicar** exige que todas las preguntas tengan respuesta.
+- **RN-11:** una clave Publicada no se modifica ni se reabre en esta historia. Su corrección y versionado corresponden a HU-EVAL-002 (§12, resuelta).
+- **RN-12** *(confirmada)*: solo se elimina una clave en Borrador; una Publicada no se elimina.
 - **RN-13:** las claves y pruebas pertenecen a una institución. COORDINADOR y DOCENTE solo ven y operan las de su institución; un recurso de otra institución se trata como inexistente (HT-AUTH-01 RN-17, `DEC-14`). ADMIN tiene alcance global.
-- **RN-14** *(propuesta)*: si dos personas editan el mismo Borrador a la vez, la segunda en guardar recibe un aviso de conflicto y no sobrescribe en silencio los cambios de la primera.
+- **RN-14** *(confirmada)*: si dos personas editan el mismo Borrador a la vez, la segunda en guardar recibe un aviso de conflicto y no sobrescribe en silencio los cambios de la primera.
 
 **Casilla «Verificada»**
 - **RN-15:** una marca leída como dudosa (UNCERTAIN o MULTIPLE) no se califica automáticamente y queda pendiente de revisión manual (`CLAUDE.md`, arquitectura).
@@ -107,7 +107,7 @@ Como **administrador** de OMR-PreICFES, quiero aprobar las cuentas que esperan h
 | Cuenta ACTIVA (tras aprobar) | Rol institucional e institución asignados | Inicia sesión y ve el menú según su rol |
 | Cuenta ya aprobada por otro | Otro ADMIN la aprobó antes | Aviso «la cuenta ya no está pendiente»; la lista se actualiza |
 | Clave en Borrador | En construcción | Editar, guardar, publicar o eliminar |
-| Clave Publicada | Lista para calificar | Solo consulta (corrección: §12) |
+| Clave Publicada | Lista para calificar | Solo consulta (la corrección corresponde a HU-EVAL-002) |
 | Clave duplicada | Ya existe una con la misma prueba, fecha, sesión y materia | Aviso; se ofrece abrir la existente |
 | Conflicto de edición | Otra persona guardó antes | Aviso; recargar antes de volver a guardar |
 | Marca dudosa pendiente | Lectura UNCERTAIN o MULTIPLE sin confirmar | Elegir valor; casilla «Verificada» deshabilitada hasta elegirlo |
@@ -116,15 +116,14 @@ Como **administrador** de OMR-PreICFES, quiero aprobar las cuentas que esperan h
 ## 8. Roles y permisos (nivel negocio)
 | Rol | Puede |
 |---|---|
-| ADMIN | Ver pendientes y aprobar cuentas; todas las funciones de claves en cualquier institución |
-| COORDINADOR | Claves de respuesta de su institución *(alcance exacto pendiente, §12)* |
-| DOCENTE | Claves de respuesta de su institución *(alcance exacto pendiente, §12)* |
-| Revisor de marcas dudosas | Marcar «Verificada» *(qué rol es está pendiente, §12)* |
+| ADMIN | Ver pendientes y aprobar cuentas; crear, editar, publicar y eliminar claves y crear pruebas en cualquier institución; verificar marcas dudosas |
+| COORDINADOR | Crear, editar, publicar y eliminar claves y crear pruebas de su institución; verificar marcas dudosas de su institución. No aprueba cuentas |
+| DOCENTE | Solo consultar claves y pruebas de su institución |
 
 ## 9. Datos de negocio involucrados
 - **Cuenta:** nombre (**personal**), correo (**personal**), estado, rol, institución, fecha de registro.
 - **Prueba:** nombre e institución.
-- **Clave de respuesta:** prueba, fecha, sesión, materia, cantidad de preguntas, respuesta por pregunta, estado, quién la creó, editó y publicó, y cuándo.
+- **Clave de respuesta:** prueba, fecha, sesión (Sesión 1 o Sesión 2), materia, cantidad de preguntas, respuesta por pregunta, estado, quién la creó, editó y publicó, y cuándo.
 - **Resolución manual:** marca, valor leído, valor resuelto, verificada (sí/no), quién y cuándo.
 - **Registro de auditoría:** acción, autor, recurso, fecha y hora.
 
@@ -159,13 +158,13 @@ Como **administrador** de OMR-PreICFES, quiero aprobar las cuentas que esperan h
 
 ### CA-06 — Crear clave y generar la grilla
 **Dado** un usuario autorizado y al menos una prueba disponible  
-**Cuando** selecciona prueba, fecha, sesión, materia (MAT, CN, CC, LC o ING) e indica N preguntas  
+**Cuando** selecciona prueba, fecha, sesión (Sesión 1 o Sesión 2), materia (MAT, CN, CC, LC o ING) e indica N preguntas (de 1 a 100)  
 **Entonces** aparece una grilla de N filas numeradas de 1 a N con las opciones A, B, C y D; al cambiar N en un Borrador la grilla se ajusta, conservando las respuestas de las preguntas que siguen existiendo y avisando antes de descartar las que sobran;  
 **y cuando** guarda, **entonces** la clave queda en Borrador.
 
 ### CA-07 — Respuestas limitadas a A, B, C y D
 **Dado** una clave en edición  
-**Cuando** se intenta guardar una respuesta distinta de A, B, C o D (incluidas BLANK, MULTIPLE o UNCERTAIN), una cantidad de preguntas no entera o menor que 1, o una materia fuera del catálogo  
+**Cuando** se intenta guardar una respuesta distinta de A, B, C o D (incluidas BLANK, MULTIPLE o UNCERTAIN), una cantidad de preguntas no entera, menor que 1 o mayor que 100, una sesión distinta de Sesión 1 o Sesión 2, o una materia fuera del catálogo  
 **Entonces** el sistema rechaza el guardado indicando el campo inválido y la clave guardada no cambia.
 
 ### CA-08 — Clave duplicada
@@ -197,7 +196,7 @@ Como **administrador** de OMR-PreICFES, quiero aprobar las cuentas que esperan h
 **Entonces** deja de aparecer en el listado y la eliminación queda registrada (RN-17).
 
 ### CA-13 — Casilla «Verificada»
-**Dado** una marca dudosa (UNCERTAIN o MULTIPLE) en resolución manual  
+**Dado** una marca dudosa (UNCERTAIN o MULTIPLE) en resolución manual, revisada por un ADMIN o COORDINADOR (con datos de prueba hasta que exista OMR-002)  
 **Cuando** aún no se eligió el valor resuelto  
 **Entonces** la casilla «Verificada» aparece deshabilitada y desmarcada;  
 **y cuando** se elige un valor (A, B, C, D o BLANK), marca la casilla y guarda, **entonces** la marca queda verificada con su valor, autor y fecha, y deja de figurar como pendiente;  
@@ -214,27 +213,28 @@ Como **administrador** de OMR-PreICFES, quiero aprobar las cuentas que esperan h
 - **RNF-02:** el código nuevo usa TypeScript en modo estricto y errores en formato `application/problem+json` (`CLAUDE.md`, `HT-AUTH-01/DEC-21`).
 
 ## 12. OPEN QUESTIONS
-No inventar respuestas. Las marcadas **(bloquea)** cambian el comportamiento observable y deben resolverse antes de `ready`.
-- [ ] **(bloquea CA-02)** Instituciones: no existe catálogo (DT-09). ¿Qué institución se asigna al aprobar? Opciones: (a) esta historia crea un catálogo mínimo de instituciones; (b) se usan instituciones sembradas por migración; (c) se espera la historia de DT-09. Propuesta técnica en `plan.md` DEC-03.
-- [ ] **(bloquea CA-06)** Pruebas: ¿de dónde sale la lista de «Nombre de la prueba»? ¿Esta historia crea un catálogo mínimo (nombre por institución) o se espera una historia de exámenes (DT-09)? Propuesta en `plan.md` DEC-04.
-- [ ] **(bloquea CA-06)** Sesión: ¿qué valores admite (p. ej. Sesión 1 / Sesión 2, Mañana / Tarde)? ¿La fecha y la sesión pertenecen a la prueba o a la clave?
-- [ ] **(bloquea RN-08)** Límite superior de la cantidad de preguntas por materia, y si la cantidad la fija la persona o viene de la configuración de la prueba.
-- [ ] **(bloquea RN-11)** ¿Cómo se corrige una clave Publicada: volver a Borrador (y con qué condiciones), crear una nueva versión, o se deja para HU-EVAL-002? ¿HU-EVAL-002 se absorbe en esta historia o se mantiene aparte?
-- [ ] **(bloquea §8)** ¿Qué pueden hacer COORDINADOR y DOCENTE con las claves (consultar, crear, editar, publicar, eliminar)? Depende de los permisos de COORDINADOR, pendientes desde `HT-AUTH-01/DEC-11`.
-- [ ] ¿Puede un COORDINADOR aprobar cuentas de su institución? (abierta desde HT-AUTH-01 §12). Propuesta: no; solo ADMIN (RN-01).
-- [ ] Confirmar RN-03 *(propuesta)*: la aprobación nunca asigna ADMIN.
-- [ ] Confirmar RN-10 *(propuesta: Borrador incompleto)*, RN-12 *(solo se elimina Borrador)* y RN-14 *(aviso de conflicto de edición)*.
-- [ ] **(bloquea CA-13 en producción)** Casilla «Verificada»: ¿qué rol revisa las marcas dudosas? ¿BLANK es un valor resuelto válido? ¿La persistencia se construye ya con datos de prueba o se espera a OMR-002? Propuesta en `plan.md` DEC-07.
-- [ ] El ID `HT-AUTH-03` agrupa funcionalidades de evaluación y OMR además de cuentas. ¿Se mantiene una sola historia o se divide (p. ej. HT-AUTH-03 para usuarios y menú; HU-EVAL-002 para claves)? Una historia única implica un único PR grande.
+Todas resueltas por el desarrollador responsable (JhonDc) el 2026-11-11, que delegó la resolución aceptando las propuestas del plan y los valores indicados (§14).
+- [x] ~~Instituciones: ¿qué institución se asigna al aprobar?~~ **Resuelta:** catálogo mínimo `instituciones` de solo consulta por API, con altas por siembra controlada (migración o comando); su administración completa sigue en DT-09 (`plan.md` DEC-03).
+- [x] ~~Pruebas: ¿de dónde sale la lista de «Nombre de la prueba»?~~ **Resuelta:** catálogo mínimo de pruebas por institución, con listado y alta (ADMIN y COORDINADOR) (`plan.md` DEC-04).
+- [x] ~~Sesión: valores; ¿fecha y sesión pertenecen a la prueba o a la clave?~~ **Resuelta:** Sesión 1 y Sesión 2. Fecha y sesión son datos de la clave.
+- [x] ~~Límite de la cantidad de preguntas y quién la fija~~ **Resuelta:** la fija la persona que registra la clave; entero de 1 a 100 (RN-08).
+- [x] ~~¿Cómo se corrige una clave Publicada? ¿Se absorbe HU-EVAL-002?~~ **Resuelta:** en esta historia una clave Publicada es de solo consulta; su corrección y versionado quedan en HU-EVAL-002, que sigue siendo una historia aparte (RN-11).
+- [x] ~~¿Qué pueden hacer COORDINADOR y DOCENTE con las claves?~~ **Resuelta:** ADMIN y COORDINADOR crean, editan, publican y eliminan; DOCENTE solo consulta (§8, `plan.md` DEC-06). Es una definición parcial de los permisos de COORDINADOR pendientes desde `HT-AUTH-01/DEC-11`.
+- [x] ~~¿Puede un COORDINADOR aprobar cuentas?~~ **Resuelta:** no; solo ADMIN (RN-01).
+- [x] ~~Confirmar RN-03~~ **Resuelta:** confirmada; la aprobación nunca asigna ADMIN.
+- [x] ~~Confirmar RN-10, RN-12 y RN-14~~ **Resuelta:** confirmadas.
+- [x] ~~Casilla «Verificada»: rol revisor, BLANK, persistencia~~ **Resuelta:** revisan ADMIN y COORDINADOR; BLANK es un valor resuelto válido; esta historia entrega esquema, servicio, regla y componente probados con datos de prueba; el endpoint productivo y sus índices se integran en OMR-002 (`plan.md` DEC-07).
+- [x] ~~¿Se mantiene una sola historia o se divide?~~ **Resuelta:** se mantiene una sola historia HT-AUTH-03 con un único PR, como pidió el desarrollador.
 
 ## 13. Checklist de spec lista (`status: ready`)
-- [ ] Objetivo, alcance y fuera de alcance claros.
-- [ ] Reglas de negocio numeradas (RN-NN).
-- [ ] Criterios de aceptación verificables (CA-NN).
-- [ ] Sin OPEN QUESTIONS que cambien el comportamiento observable (o resueltas con el responsable funcional y registradas en §14).
-- [ ] Todo requisito respaldado por `docs/requisitos/` o una decisión registrada.
+- [x] Objetivo, alcance y fuera de alcance claros.
+- [x] Reglas de negocio numeradas (RN-NN).
+- [x] Criterios de aceptación verificables (CA-NN).
+- [x] Sin OPEN QUESTIONS que cambien el comportamiento observable (o resueltas con el responsable funcional y registradas en §14).
+- [x] Todo requisito respaldado por `docs/requisitos/` o una decisión registrada.
 
 ## 14. Registro de cambios y aclaraciones
 | Fecha | Cambio / aclaración | Fuente o persona consultada |
 |---|---|---|
 | 2026-11-11 | Creación con `/sdd-spec`. **Requisitos aportados por JhonDc el 2026-11-11**: (1) panel de usuarios para aprobar cuentas de PENDIENTE_APROBACION a ACTIVA; (2) menú lateral para la navegación principal; (3) CRUD de clave de respuestas: selección de nombre de la prueba, fecha, sesión y materia (MAT, CN, CC, LC, ING), grilla dinámica según la cantidad de preguntas por materia, respuestas limitadas a A, B, C y D, guardar la clave y que sea editable, con estados Borrador y Publicada; (4) casilla «Verificada» vinculada a la resolución manual para confirmar marcas dudosas del OMR. Se pidió incluir criterios de aceptación, modelos MongoDB y endpoints NestJS. Pendiente: guardar estos requisitos en `docs/requisitos/historias/HT-AUTH-03.md`. | Requisitos aportados por JhonDc |
+| 2026-11-11 | **Resolución de las OPEN QUESTIONS y aprobación.** El responsable aprobó la spec y delegó la resolución de §12 aceptando las propuestas: catálogos mínimos de instituciones (siembra) y pruebas; Sesión 1 y Sesión 2; 1 a 100 preguntas; clave Publicada de solo consulta (corrección en HU-EVAL-002); permisos ADMIN/COORDINADOR completos y DOCENTE de consulta; COORDINADOR no aprueba cuentas; RN-03, RN-10, RN-12 y RN-14 confirmadas; revisión manual por ADMIN/COORDINADOR, BLANK válido y endpoint de verificación trasladado a OMR-002; historia única. RN-01, RN-08, RN-11, §3, §4, §8, §9, CA-06, CA-07 y CA-13 actualizados con esos valores. Ningún ID cambia de número. Estado draft → ready. | Decisión de JhonDc (2026-11-11) |

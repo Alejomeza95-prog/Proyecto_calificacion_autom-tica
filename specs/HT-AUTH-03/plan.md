@@ -1,7 +1,7 @@
 ---
 id: HT-AUTH-03
 spec: ./spec.md
-status: draft            # draft | ready  (solo el desarrollador marca ready)
+status: ready            # draft | ready  (solo el desarrollador marca ready)
 owner: JhonDc
 updated: 2026-11-11
 ---
@@ -10,20 +10,20 @@ updated: 2026-11-11
 
 > **plan.md describe CÓMO se construye lo definido en `spec.md`.** Respeta `specs/000-architecture/architecture.md` y las skills `project-architecture` y `mongodb-mongoose`.
 > Persistencia exclusiva: MongoDB + Mongoose. No PostgreSQL, Prisma ni MySQL.
-> Generado por `/sdd-spec` como propuesta (`draft`). Todas las decisiones de §14 están en estado **propuesta**.
+> Generado por `/sdd-spec` como propuesta y aprobado por el responsable (JhonDc) el 2026-11-11. Las decisiones de §14 están **aprobadas**.
 
 ## 1. Resumen técnico
-Se agregan al backend NestJS cuatro módulos: `admin-users` (aprobación de cuentas sobre la colección existente `usuarios`), `pruebas` (catálogo mínimo, sujeto a DEC-04), `answer-keys` (CRUD de `claves_respuesta` con estados BORRADOR/PUBLICADA y concurrencia optimista) y `manual-review` (contrato de la casilla «Verificada», persistencia bloqueada por OMR-002). Un `AdminAuditService` registra las acciones en `auditoria_admin`. En el frontend se crea un `AppShell` con `Sidebar` para las rutas privadas y las pantallas de usuarios y claves, más el componente `VerifiedCheckbox`. Sin transacciones multi-documento: toda escritura es atómica de un solo documento (DT-02 sigue standalone).
+Se agregan al backend NestJS cuatro módulos: `admin-users` (aprobación de cuentas sobre la colección existente `usuarios`), `instituciones` y `pruebas` (catálogos mínimos, DEC-03 y DEC-04), `answer-keys` (CRUD de `claves_respuesta` con estados BORRADOR/PUBLICADA y concurrencia optimista) y `manual-review` (esquema, regla y servicio de la casilla «Verificada»; el endpoint productivo se integra en OMR-002). Un `AdminAuditService` registra las acciones en `auditoria_admin`. En el frontend se crea un `AppShell` con `Sidebar` para las rutas privadas y las pantallas de usuarios y claves, más el componente `VerifiedCheckbox`. Sin transacciones multi-documento: toda escritura es atómica de un solo documento (DT-02 sigue standalone).
 
 ## 2. Arquitectura
 ### 2.1 Componentes afectados
 | Componente | Ruta | Cambio |
 |---|---|---|
 | API NestJS | `apps/backend/src/admin-users/` | Nuevo: listado de pendientes y aprobación |
-| API NestJS | `apps/backend/src/pruebas/` | Nuevo (DEC-04): esquema y listado/alta mínima |
-| API NestJS | `apps/backend/src/instituciones/` | Nuevo solo si se aprueba DEC-03 |
+| API NestJS | `apps/backend/src/pruebas/` | Nuevo (DEC-04): esquema, listado y alta mínima |
+| API NestJS | `apps/backend/src/instituciones/` | Nuevo (DEC-03): esquema, listado de solo lectura y comando de siembra idempotente |
 | API NestJS | `apps/backend/src/answer-keys/` | Nuevo: CRUD de claves |
-| API NestJS | `apps/backend/src/manual-review/` | Nuevo: DTO, regla y servicio de verificación (endpoint habilitado con OMR-002) |
+| API NestJS | `apps/backend/src/manual-review/` | Nuevo: esquema, DTO, regla y servicio de verificación (endpoint en OMR-002, DEC-07) |
 | API NestJS | `apps/backend/src/audit/` | Nuevo `AdminAuditService` + esquema `auditoria_admin` |
 | API NestJS | `apps/backend/src/common/http/problem.ts` | Nuevo `ProblemType.CONFLICTO` (`conflicto`, 409) |
 | Migraciones | `apps/backend/migrations/003-ht-auth-03-indices.ts` | Índices de §4 |
@@ -40,7 +40,7 @@ React (AppShell + Sidebar) ──► NestJS
    ├─ AdminUsersController ──► AdminUsersService ──► usuarios (findOneAndUpdate condicional)
    ├─ PruebasController ─────► PruebasService ─────► pruebas
    ├─ AnswerKeysController ──► AnswerKeysService ──► claves_respuesta (version optimista)
-   ├─ ManualReviewController ► ManualReviewService ► resoluciones_manuales  (bloqueado: OMR-002)
+   ├─ (OMR-002) ManualReviewController ► ManualReviewService ► resoluciones_manuales
    └─ todos ──► AdminAuditService ──► auditoria_admin
 Guards existentes: JwtAuthGuard → RolesGuard; alcance con InstitutionScopePolicy (RN-13).
 ```
@@ -66,7 +66,7 @@ Guards existentes: JwtAuthGuard → RolesGuard; alcance con InstitutionScopePoli
 - Actualización: `{ $set: { estado: 'ACTIVA', rol, institucion_id } }` con filtro `{ _id, estado: 'PENDIENTE_APROBACION' }` y `runValidators: true`. Como el validador `pre('validate')` de RN-15 no se ejecuta en `findOneAndUpdate`, el servicio llama a `roleInstitutionViolation('ACTIVA', rol, institucionId)` antes de actualizar.
 - PII: `nombre`, `correo_normalizado` (se devuelven solo al ADMIN en el listado; nunca en logs ni auditoría).
 
-### 3.2 `instituciones` (solo si se aprueba DEC-03)
+### 3.2 `instituciones` (DEC-03)
 - Clase `InstitucionSchema` · `@Schema({ collection: 'instituciones', timestamps: { createdAt: 'creado_en', updatedAt: 'actualizado_en' } })`.
 
 | Campo | Tipo Mongoose | Requerido | Validación | Referencia | PII |
@@ -77,6 +77,7 @@ Guards existentes: JwtAuthGuard → RolesGuard; alcance con InstitutionScopePoli
 | `activa` | Boolean | sí | `default: true` | | no |
 
 ### 3.3 `pruebas` (DEC-04)
+- Alta por ADMIN y COORDINADOR (DEC-06); el COORDINADOR solo en su institución, el ADMIN indica `institucionId`.
 - Clase `PruebaSchema` · `@Schema({ collection: 'pruebas', timestamps: { createdAt: 'creado_en', updatedAt: 'actualizado_en' } })`.
 - Referencia a institución (no embebido): la prueba se lista y filtra por institución.
 
@@ -100,9 +101,9 @@ Guards existentes: JwtAuthGuard → RolesGuard; alcance con InstitutionScopePoli
 | `institucion_id` | ObjectId | sí | | `Institucion` | no |
 | `prueba_id` | ObjectId | sí | | `Prueba` | no |
 | `fecha` | Date | sí | normalizada a 00:00 UTC (solo día) | | no |
-| `sesion` | String | sí | `enum: SESIONES` (valores pendientes, spec §12) | | no |
+| `sesion` | String | sí | `enum: SESIONES = ['SESION_1','SESION_2']` (spec §12) | | no |
 | `materia` | String | sí | `enum: ['MAT','CN','CC','LC','ING']` | | no |
-| `cantidad_preguntas` | Number | sí | entero, `min: 1`, `max: MAX_PREGUNTAS` (pendiente, spec §12) | | no |
+| `cantidad_preguntas` | Number | sí | entero, `min: 1`, `max: MAX_PREGUNTAS = 100` (RN-08) | | no |
 | `respuestas` | [String \| null] | sí | cada elemento `enum: ['A','B','C','D', null]`; `length === cantidad_preguntas` (validador) | | no |
 | `estado` | String | sí | `enum: ['BORRADOR','PUBLICADA']`, `default: 'BORRADOR'` | | no |
 | `creado_por` | ObjectId | sí | | `Usuario` | no |
@@ -129,7 +130,7 @@ Validador de documento: si `estado === 'PUBLICADA'`, ningún elemento de `respue
 | `detalle` | Mixed | no | solo campos no personales (p. ej. `{rol}`, `{estado_anterior, estado_nuevo}`, `{cantidad_preguntas}`) | | no |
 | `correlation_id` | String | no | `maxlength: 128` | | no |
 
-### 3.6 `resoluciones_manuales` (propuesta DEC-07 — bloqueada por OMR-002)
+### 3.6 `resoluciones_manuales` (DEC-07 — esquema en esta historia; índices y endpoint en OMR-002)
 - Clase `ResolucionManualSchema` · `@Schema({ collection: 'resoluciones_manuales', timestamps: { createdAt: 'creado_en', updatedAt: 'actualizado_en' } })`.
 - Referencia a la lectura de OMR-002 (aún sin colección definida); un documento por marca dudosa.
 
@@ -159,7 +160,7 @@ Validador de documento: `verificada === true` ⇒ `valor_resuelto !== null` (RN-
 | `auditoria_admin` | `ix_auditoria_admin_recurso` `{ recurso_tipo: 1, recurso_id: 1, creado_en: -1 }` | compuesto | — | Historial de un recurso (CA-14) |
 | `resoluciones_manuales` | `ux_resolucion_marca` `{ lectura_id: 1, materia: 1, numero_pregunta: 1 }` | único | — | Una resolución por marca (RN-16) — se crea con OMR-002 |
 | `resoluciones_manuales` | `ix_resolucion_pendientes` `{ institucion_id: 1, verificada: 1 }` | parcial | `{ verificada: false }` | Cola de pendientes (RN-15) — se crea con OMR-002 |
-| `instituciones` | `ux_instituciones_nombre` `{ nombre: 1 }` | único, collation `es` strength 2 | — | Solo si DEC-03 |
+| `instituciones` | `ux_instituciones_nombre` `{ nombre: 1 }` | único, collation `es` strength 2 | — | Siembra idempotente sin duplicados (DEC-03, CA-02) |
 
 ## 5. Consistencia y transacciones
 - ¿Atomicidad entre varios documentos? **No.** Cada operación escribe un único documento de negocio; la auditoría se inserta después.
@@ -169,7 +170,7 @@ Validador de documento: `verificada === true` ⇒ `valor_resuelto !== null` (RN-
   - Claves: índice único `ux_claves_identidad` → E11000 se traduce a 409 `conflicto` (CA-08). Edición con `version` enviado por el cliente: `updateOne({ _id, version, estado: 'BORRADOR' }, { $set, $inc: { version: 1 } })`; `matchedCount === 0` → 409 (RN-14, RN-11).
   - Publicación: `updateOne({ _id, version, estado: 'BORRADOR', respuestas: { $not: { $elemMatch: { $eq: null } } } }, { $set: { estado: 'PUBLICADA', ... } })`: la completitud se comprueba en el mismo filtro atómico.
   - Eliminación: `deleteOne({ _id, estado: 'BORRADOR', ...alcance })`.
-- Auditoría fuera de la escritura principal: si la inserción falla se registra un error con `correlationId` y la operación de negocio no se revierte (riesgo aceptado como propuesta en DEC-05; sin outbox mientras DT-02 siga pendiente).
+- Auditoría fuera de la escritura principal: si la inserción falla se registra un error con `correlationId` y la operación de negocio no se revierte (riesgo aceptado en DEC-05; sin outbox mientras DT-02 siga pendiente).
 
 ## 6. Archivos (GridFS)
 - No aplica: la historia no almacena archivos.
@@ -179,26 +180,26 @@ Runner `MigrationRunner` (`HT-AUTH-01/DEC-12`).
 
 | Script | Colección | `schemaVersion` origen → destino | Acción | Reversión | Idempotente |
 |---|---|---|---|---|---|
-| `003-ht-auth-03-indices.ts` | `usuarios`, `pruebas`, `claves_respuesta`, `auditoria_admin` (+ `instituciones` si DEC-03) | — (colecciones nuevas en v1; `usuarios` sin cambio) | Crear los índices de §4 excepto los de `resoluciones_manuales` | `dropIndex` de cada índice creado | sí (`createIndex` con la misma especificación) |
-| `004-...` (con OMR-002) | `resoluciones_manuales` | — → 1 | Índices de §3.6 | `dropIndex` | sí |
+| `003-ht-auth-03-indices.ts` | `usuarios`, `instituciones`, `pruebas`, `claves_respuesta`, `auditoria_admin` | — (colecciones nuevas en v1; `usuarios` sin cambio) | Crear los índices de §4 excepto los de `resoluciones_manuales` | `dropIndex` de cada índice creado | sí (`createIndex` con la misma especificación) |
+| (en OMR-002) | `resoluciones_manuales` | — → 1 | Índices de §3.6 | `dropIndex` | sí |
 
 ## 8. Endpoints
-Errores en `application/problem+json`. Todas las rutas requieren `JwtAuthGuard`; las que cambian estado llevan `@OriginProtected()` (`HT-AUTH-01/DEC-20`). Roles de claves sujetos a DEC-06.
+Errores en `application/problem+json`. Todas las rutas requieren `JwtAuthGuard`; las que cambian estado llevan `@OriginProtected()` (`HT-AUTH-01/DEC-20`). Roles según DEC-06: «Lectura» = ADMIN, COORDINADOR, DOCENTE; «Edición» = ADMIN, COORDINADOR.
 
 | Método | Path | Rol | Request | Response | Códigos | Idempotencia | CA |
 |---|---|---|---|---|---|---|---|
 | GET | `/api/v1/admin/usuarios?estado=PENDIENTE_APROBACION&pagina&limite` | ADMIN | query | `{ items: UsuarioPendienteDto[], total }` | 200/400/401/403 | sí | CA-01 |
 | POST | `/api/v1/admin/usuarios/:id/aprobar` | ADMIN | `AprobarCuentaDto` | `UsuarioAprobadoDto` | 200/400/401/403/404/409 | no (2.ª vez → 409) | CA-02, CA-03 |
-| GET | `/api/v1/instituciones` | ADMIN | — | `InstitucionDto[]` | 200/401/403 | sí | CA-02 (solo DEC-03) |
-| GET | `/api/v1/pruebas` | DEC-06 | `?institucionId` (solo ADMIN) | `PruebaDto[]` | 200/401/403 | sí | CA-06 |
-| POST | `/api/v1/pruebas` | DEC-06 | `CrearPruebaDto` | `PruebaDto` | 201/400/401/403/409 | no | CA-06 (solo DEC-04 b) |
-| GET | `/api/v1/claves-respuesta` | DEC-06 | `?pruebaId&fecha&sesion&materia&estado&pagina&limite` | `{ items: ClaveResumenDto[], total }` | 200/400/401/403 | sí | CA-11 |
-| GET | `/api/v1/claves-respuesta/:id` | DEC-06 | — | `ClaveRespuestaDto` | 200/401/403/404 | sí | CA-11 |
-| POST | `/api/v1/claves-respuesta` | DEC-06 | `CrearClaveDto` | `ClaveRespuestaDto` (BORRADOR) | 201/400/401/403/404/409 | no (duplicado → 409) | CA-06, CA-07, CA-08 |
-| PUT | `/api/v1/claves-respuesta/:id` | DEC-06 | `ActualizarClaveDto` (incluye `version`) | `ClaveRespuestaDto` | 200/400/401/403/404/409 | sí con la misma `version` | CA-07, CA-09, CA-10 |
-| POST | `/api/v1/claves-respuesta/:id/publicar` | DEC-06 | `{ version }` | `ClaveRespuestaDto` (PUBLICADA) | 200/401/403/404/409/422 | no | CA-10 |
-| DELETE | `/api/v1/claves-respuesta/:id?version=` | DEC-06 | — | — | 204/401/403/404/409 | sí (2.ª vez → 404) | CA-10, CA-12 |
-| PATCH | `/api/v1/revision-manual/marcas/:id` | DEC-07 | `ResolverMarcaDto` | `ResolucionManualDto` | 200/400/401/403/404/409 | sí | CA-13 (**bloqueado por OMR-002**) |
+| GET | `/api/v1/instituciones` | ADMIN | — | `InstitucionDto[]` | 200/401/403 | sí | CA-02 |
+| GET | `/api/v1/pruebas` | Lectura | `?institucionId` (solo ADMIN) | `PruebaDto[]` | 200/401/403 | sí | CA-06 |
+| POST | `/api/v1/pruebas` | Edición | `CrearPruebaDto` | `PruebaDto` | 201/400/401/403/409 | no | CA-06 |
+| GET | `/api/v1/claves-respuesta` | Lectura | `?pruebaId&fecha&sesion&materia&estado&pagina&limite` | `{ items: ClaveResumenDto[], total }` | 200/400/401/403 | sí | CA-11 |
+| GET | `/api/v1/claves-respuesta/:id` | Lectura | — | `ClaveRespuestaDto` | 200/401/403/404 | sí | CA-11 |
+| POST | `/api/v1/claves-respuesta` | Edición | `CrearClaveDto` | `ClaveRespuestaDto` (BORRADOR) | 201/400/401/403/404/409 | no (duplicado → 409) | CA-06, CA-07, CA-08 |
+| PUT | `/api/v1/claves-respuesta/:id` | Edición | `ActualizarClaveDto` (incluye `version`) | `ClaveRespuestaDto` | 200/400/401/403/404/409 | sí con la misma `version` | CA-07, CA-09, CA-10 |
+| POST | `/api/v1/claves-respuesta/:id/publicar` | Edición | `{ version }` | `ClaveRespuestaDto` (PUBLICADA) | 200/401/403/404/409/422 | no | CA-10 |
+| DELETE | `/api/v1/claves-respuesta/:id?version=` | Edición | — | — | 204/401/403/404/409 | sí (2.ª vez → 404) | CA-10, CA-12 |
+| PATCH | `/api/v1/revision-manual/marcas/:id` | ADMIN, COORDINADOR | `ResolverMarcaDto` | `ResolucionManualDto` | 200/400/401/403/404/409 | sí | Contrato reservado; se implementa en OMR-002 (DEC-07). En esta historia CA-13 se verifica en servicio y componente |
 
 Códigos: 404 también para recursos de otra institución (RN-13); 409 `conflicto` para estado no pendiente, duplicado, versión desactualizada o clave publicada; 422 `clave-incompleta` con `preguntasFaltantes: number[]` al publicar incompleta.
 
@@ -208,6 +209,8 @@ Clases concretas con `class-validator` y `ValidationPipe` global (`HT-AUTH-01/DE
 ```ts
 export const MATERIAS = ['MAT', 'CN', 'CC', 'LC', 'ING'] as const;
 export const OPCIONES_CLAVE = ['A', 'B', 'C', 'D'] as const;
+export const SESIONES = ['SESION_1', 'SESION_2'] as const;
+export const MAX_PREGUNTAS = 100;
 
 export class AprobarCuentaDto {
   @IsIn(['COORDINADOR', 'DOCENTE']) rol!: 'COORDINADOR' | 'DOCENTE';   // RN-03
@@ -217,7 +220,7 @@ export class AprobarCuentaDto {
 export class CrearClaveDto {
   @IsMongoId() pruebaId!: string;
   @IsISO8601({ strict: true }) @Matches(/^\d{4}-\d{2}-\d{2}$/) fecha!: string; // solo día
-  @IsIn(SESIONES) sesion!: Sesion;                                     // valores pendientes
+  @IsIn(SESIONES) sesion!: Sesion;                                     // 'SESION_1' | 'SESION_2'
   @IsIn(MATERIAS) materia!: Materia;
   @IsInt() @Min(1) @Max(MAX_PREGUNTAS) cantidadPreguntas!: number;
   @IsArray() @ArrayMaxSize(MAX_PREGUNTAS)
@@ -249,11 +252,11 @@ No hay paquete compartido (DT-01 abierto). El frontend declara los tipos en `fea
 |---|---|---|---|
 | Historia | HT-AUTH-01 (guards, `usuarios`, alcance) | En `develop` | — |
 | Historia | HT-AUTH-02 (sesión y rutas privadas en el frontend) | En `develop` (in-review) | — |
-| Historia | OMR-002 (lecturas dudosas) | pending spec | Bloquea la persistencia y el endpoint de CA-13; se entrega componente, regla y servicio probados con datos de prueba |
-| Historia | HU-EVAL-002 (claves versionadas) | pending spec | Riesgo de duplicar diseño; decidir alcance (spec §12) |
-| Técnica transversal | DT-09 entidades base (instituciones, pruebas) | Pendiente | **Bloquea** CA-02 y CA-06 hasta DEC-03/DEC-04 |
+| Historia | OMR-002 (lecturas dudosas) | pending spec | No bloquea: el endpoint y los índices de `resoluciones_manuales` se trasladan a OMR-002 (DEC-07) |
+| Historia | HU-EVAL-002 (claves versionadas) | pending spec | Separada: corregirá y versionará claves publicadas; deberá migrar `ux_claves_identidad` si agrega versión |
+| Técnica transversal | DT-09 entidades base (instituciones, pruebas) | Pendiente | No bloquea: DEC-03 y DEC-04 crean catálogos mínimos compatibles con la futura administración completa |
 | Técnica transversal | DT-02 replica set | Pendiente | No bloquea: diseño sin transacciones (§5) |
-| Técnica transversal | DT-04 RBAC (permisos de COORDINADOR) | Parcial | **Bloquea** DEC-06 (roles de claves) |
+| Técnica transversal | DT-04 RBAC (permisos de COORDINADOR) | Parcial | No bloquea: DEC-06 define los permisos de COORDINADOR sobre claves y pruebas |
 | Técnica transversal | DT-07 migraciones | Resuelta | — |
 | Librería nueva | Ninguna | — | — |
 
@@ -285,7 +288,7 @@ Integración contra MongoDB 7 de Compose con base aislada por suite (`HT-AUTH-01
 | CA-10, RN-10, RN-11 | integración API | Publicar completa → PUBLICADA con `publicada_por/en`; incompleta → 422 con `preguntasFaltantes`; PUT/DELETE sobre PUBLICADA → 409 | Jest + Supertest | — |
 | CA-11, RN-13 | integración API | DOCENTE de inst. A no ve claves de B en listado; GET por id de B → 404; ADMIN ve ambas; filtros por materia/estado | Jest + Supertest | 2 instituciones |
 | CA-12, RN-12 | integración API | DELETE de borrador → 204 y evento; segunda vez → 404 | Jest + Supertest | — |
-| CA-13, RN-15, RN-16 | unit + componente (+ integración con OMR-002) | Casilla deshabilitada sin valor; habilitada tras elegir; nunca marcada por defecto; servicio rechaza `verificada: true` sin valor; validador de esquema | Vitest; Jest | marcas simuladas UNCERTAIN/MULTIPLE |
+| CA-13, RN-15, RN-16 | unit + componente + integración MongoDB del esquema | Casilla deshabilitada sin valor; habilitada tras elegir; nunca marcada por defecto; servicio rechaza `verificada: true` sin valor; validador de esquema | Vitest; Jest | marcas simuladas UNCERTAIN/MULTIPLE |
 | CA-14, RN-17 | integración MongoDB | Cada acción inserta un evento con actor y recurso; `strict: 'throw'` rechaza un campo `correo` | Jest | — |
 | E2E crítico | E2E | ADMIN aprueba cuenta → DOCENTE inicia sesión → crea, edita y publica clave | Playwright | seed |
 | RNF-02 | estático | `tsc --noEmit` strict y lint en backend y frontend | tsc, ESLint | — |
@@ -302,36 +305,37 @@ Integración contra MongoDB 7 de Compose con base aislada por suite (`HT-AUTH-01
 ## 14. Decisiones técnicas
 | ID | Decisión | Alternativas consideradas | Motivo | Fecha |
 |---|---|---|---|---|
-| DEC-01 | *(propuesta)* Aprobación con `findOneAndUpdate` condicional sobre `estado` | Leer + guardar; transacción | Atómico en un documento; sin replica set (RN-04) | 2026-11-11 |
-| DEC-02 | *(propuesta)* Respuestas de la clave embebidas como arreglo en `claves_respuesta` | Colección `respuestas_clave` por pregunta | Lectura/escritura conjunta, tamaño acotado, publicación atómica | 2026-11-11 |
-| DEC-03 | *(propuesta, bloquea CA-02)* Catálogo mínimo `instituciones` (solo lectura por API, alta por migración/seed) | Esperar DT-09; ObjectId libre sin validar | Aprobar exige institución (HT-AUTH-01 RN-15) y no existe catálogo | 2026-11-11 |
-| DEC-04 | *(propuesta, bloquea CA-06)* Catálogo mínimo `pruebas` por institución con listado y alta | Esperar historia de exámenes; texto libre en la clave | «Selección» del nombre exige una lista; texto libre impide la unicidad de RN-07 | 2026-11-11 |
-| DEC-05 | *(propuesta)* Colección nueva `auditoria_admin` en lugar de ampliar `auditoria_auth`; inserción posterior sin outbox | Ampliar `auditoria_auth` (cambio de esquema y `strict`); outbox (requiere DT-02) | Separa dominios; no toca una colección aprobada | 2026-11-11 |
-| DEC-06 | *(propuesta, bloquea §8)* Claves: ADMIN y COORDINADOR crean/editan/publican/eliminan; DOCENTE solo consulta | Todos los roles institucionales con permisos completos | Publicar afecta la calificación; pendiente de definir permisos de COORDINADOR (DT-04) | 2026-11-11 |
-| DEC-07 | *(propuesta)* `resoluciones_manuales` como colección propia ligada a la lectura de OMR-002; en esta historia solo esquema, servicio, DTO y componente, sin endpoint productivo | Campo `verificada` dentro de la lectura OMR | La colección de lecturas aún no existe; evita fijar el esquema de OMR-002 | 2026-11-11 |
-| DEC-08 | *(propuesta)* Concurrencia optimista con `version` en `claves_respuesta` | Último en guardar gana | Evitar pérdida silenciosa de cambios (RN-14) | 2026-11-11 |
-| DEC-09 | *(propuesta)* `AppShell` con `Sidebar` envuelve solo las rutas privadas; las pantallas de autenticación de HT-AUTH-02 no cambian | Menú global | No altera flujos aprobados de HT-AUTH-02 | 2026-11-11 |
+| DEC-01 | *(aprobada)* Aprobación con `findOneAndUpdate` condicional sobre `estado` | Leer + guardar; transacción | Atómico en un documento; sin replica set (RN-04) | 2026-11-11 |
+| DEC-02 | *(aprobada)* Respuestas de la clave embebidas como arreglo en `claves_respuesta` | Colección `respuestas_clave` por pregunta | Lectura/escritura conjunta, tamaño acotado, publicación atómica | 2026-11-11 |
+| DEC-03 | *(aprobada)* Catálogo mínimo `instituciones` (solo lectura por API, alta por comando de siembra idempotente) | Esperar DT-09; ObjectId libre sin validar | Aprobar exige institución (HT-AUTH-01 RN-15) y no existe catálogo | 2026-11-11 |
+| DEC-04 | *(aprobada)* Catálogo mínimo `pruebas` por institución con listado y alta | Esperar historia de exámenes; texto libre en la clave | «Selección» del nombre exige una lista; texto libre impide la unicidad de RN-07 | 2026-11-11 |
+| DEC-05 | *(aprobada)* Colección nueva `auditoria_admin` en lugar de ampliar `auditoria_auth`; inserción posterior sin outbox | Ampliar `auditoria_auth` (cambio de esquema y `strict`); outbox (requiere DT-02) | Separa dominios; no toca una colección aprobada | 2026-11-11 |
+| DEC-06 | *(aprobada)* Claves y pruebas: ADMIN y COORDINADOR crean/editan/publican/eliminan; DOCENTE solo consulta; ADMIN y COORDINADOR revisan marcas dudosas | Todos los roles institucionales con permisos completos | Publicar afecta la calificación; pendiente de definir permisos de COORDINADOR (DT-04) | 2026-11-11 |
+| DEC-07 | *(aprobada)* `resoluciones_manuales` como colección propia ligada a la lectura de OMR-002; en esta historia esquema, servicio, DTO y componente; endpoint e índices trasladados a OMR-002 | Campo `verificada` dentro de la lectura OMR | La colección de lecturas aún no existe; evita fijar el esquema de OMR-002 | 2026-11-11 |
+| DEC-08 | *(aprobada)* Concurrencia optimista con `version` en `claves_respuesta` | Último en guardar gana | Evitar pérdida silenciosa de cambios (RN-14) | 2026-11-11 |
+| DEC-09 | *(aprobada)* `AppShell` con `Sidebar` envuelve solo las rutas privadas; las pantallas de autenticación de HT-AUTH-02 no cambian | Menú global | No altera flujos aprobados de HT-AUTH-02 | 2026-11-11 |
 
 ## 15. Riesgos y OPEN QUESTIONS técnicas
-- [ ] **Bloqueante:** DEC-03 y DEC-04 (DT-09). Sin catálogo de instituciones y pruebas no se puede cumplir CA-02 ni CA-06.
-- [ ] **Bloqueante:** valores de `SESIONES` y `MAX_PREGUNTAS` (spec §12).
-- [ ] **Bloqueante:** DEC-06 (roles sobre claves).
-- [ ] Corrección de claves PUBLICADA (RN-11) y solapamiento con HU-EVAL-002: si HU-EVAL-002 introduce versiones, `ux_claves_identidad` tendrá que incluir la versión (migración futura).
-- [ ] OMR-002: el esquema de lecturas puede obligar a ajustar `resoluciones_manuales` (DEC-07).
-- [ ] Aceptar el riesgo de auditoría perdida si falla la inserción posterior (DEC-05).
-- [ ] Tamaño de la historia: cuatro funcionalidades en un PR; evaluar dividirla (spec §12).
+- [x] ~~DEC-03 y DEC-04 (DT-09)~~ **Resuelta:** aprobadas el 2026-11-11.
+- [x] ~~Valores de `SESIONES` y `MAX_PREGUNTAS`~~ **Resuelta:** `SESION_1`/`SESION_2` y 100 (spec §12).
+- [x] ~~DEC-06 (roles sobre claves)~~ **Resuelta:** aprobada el 2026-11-11.
+- [x] ~~Corrección de claves PUBLICADA y solapamiento con HU-EVAL-002~~ **Resuelta:** solo consulta aquí; HU-EVAL-002 separada. Riesgo aceptado: si HU-EVAL-002 introduce versiones, deberá migrar `ux_claves_identidad`.
+- [x] ~~Esquema de OMR-002 frente a `resoluciones_manuales`~~ **Resuelta:** DEC-07 aprobada. Riesgo aceptado: OMR-002 puede ajustar el esquema (`schemaVersion` 1 → 2 con migración).
+- [x] ~~Auditoría perdida si falla la inserción posterior~~ **Resuelta:** riesgo aceptado (DEC-05) mientras DT-02 siga pendiente.
+- [x] ~~Tamaño de la historia~~ **Resuelta:** historia única con un PR (spec §12).
 
 ## 16. Checklist de plan listo (`status: ready`)
-- [ ] Cada CA y RN de la spec tiene diseño y estrategia de prueba.
-- [ ] Colecciones con `collection:` explícito, validaciones y `schemaVersion`.
-- [ ] Cada índice justificado por una consulta o regla.
-- [ ] Decisión de transacciones coherente con replica set (DT-02).
-- [ ] Endpoints y contratos completos.
-- [ ] Sin tecnologías fuera de la arquitectura aprobada.
-- [ ] Ningún ID (`RN`/`CA`/`RNF`) citado aquí falta en la spec; `scripts/sdd-validate.ps1 -Id HT-AUTH-03` sin `[FALLA]`.
-- [ ] `spec.md` en `ready`.
+- [x] Cada CA y RN de la spec tiene diseño y estrategia de prueba.
+- [x] Colecciones con `collection:` explícito, validaciones y `schemaVersion`.
+- [x] Cada índice justificado por una consulta o regla.
+- [x] Decisión de transacciones coherente con replica set (DT-02).
+- [x] Endpoints y contratos completos.
+- [x] Sin tecnologías fuera de la arquitectura aprobada.
+- [x] Ningún ID (`RN`/`CA`/`RNF`) citado aquí falta en la spec; `scripts/sdd-validate.ps1 -Id HT-AUTH-03` sin `[FALLA]`.
+- [x] `spec.md` en `ready`.
 
 ## 17. Registro de cambios
 | Fecha | Cambio | Motivo (CA/RN/spec §14) | Estado previo → nuevo |
 |---|---|---|---|
 | 2026-11-11 | Creación con `/sdd-spec` | spec §14 | — → draft |
+| 2026-11-11 | Decisiones DEC-01..DEC-09 aprobadas; `SESIONES` y `MAX_PREGUNTAS` fijados; roles de §8 concretados; endpoint de verificación e índices de `resoluciones_manuales` trasladados a OMR-002; DT-09 y DT-04 dejan de bloquear; §15 resuelta; checklist §16 completo | spec §12 y §14 (decisión de JhonDc) | draft → ready |
