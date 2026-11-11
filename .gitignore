@@ -64,6 +64,10 @@ desktop.ini
 !.vscode/extensions.json
 !.vscode/settings.json
 
+# Impeccable: maquetas de exploración y estado temporal de preguntas (no son diseño aprobado)
+.impeccable/mocks/
+.impeccable/questions/
+
 # Claude Code: configuración personal local
 .claude/settings.local.json
 CLAUDE.local.md

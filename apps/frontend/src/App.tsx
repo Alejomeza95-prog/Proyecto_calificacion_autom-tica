@@ -1,11 +1,14 @@
-/**
- * Raíz de la aplicación. Esqueleto de HT-CORE-01: sin pantallas ni lógica de negocio;
- * las rutas y pantallas llegan con el Bloque B y las demás historias.
- */
+import { BrowserRouter } from 'react-router';
+import { AppRoutes } from './app/router.tsx';
+import { SessionProvider } from './features/auth/session/SessionProvider.tsx';
+
+/** Raíz de la aplicación. */
 export function App() {
   return (
-    <main>
-      <h1>OMR-PreICFES</h1>
-    </main>
+    <BrowserRouter>
+      <SessionProvider>
+        <AppRoutes />
+      </SessionProvider>
+    </BrowserRouter>
   );
 }

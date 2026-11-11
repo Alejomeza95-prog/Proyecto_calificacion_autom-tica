@@ -1,0 +1,81 @@
+/* Tokens del módulo de autenticación (DEC-10; ver DESIGN.md). Un solo azul institucional, fondos claros y neutros fríos. */
+:root {
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Neutros fríos, tintados del azul institucional. */
+  --canvas: #eef1f7;
+  --surface: #ffffff;
+  --ink: #141a2a;
+  --ink-muted: #4a5468;
+  --line: #dde2ec;
+  --field-border: #7b8598;
+
+  /* Azul institucional: única tinta de acción. */
+  --primary: #1d3fae;
+  --primary-deep: #15307f;
+  --primary-tint: #eef3fd;
+  --primary-line: #c3d3f6;
+  --panel: #12276a;
+  --panel-ink: #ffffff;
+  --panel-muted: #c9d4f5;
+  --on-primary: #ffffff;
+
+  /* Estados: siempre con icono y texto, nunca solo color. */
+  --danger: #b42318;
+  --danger-ink: #8f1c13;
+  --danger-tint: #fef0ee;
+  --danger-line: #f2b8b0;
+  --success-ink: #11613d;
+  --success-tint: #ebf7f0;
+  --success-line: #b5dfc6;
+  --review: #e8a317;
+
+  --step-1: 0.5rem;
+  --step-2: 1rem;
+  --step-3: 1.5rem;
+  --step-4: 2.5rem;
+  --control-height: 3rem;
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --ring: 3px solid var(--primary);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--primary);
+  text-underline-offset: 0.2em;
+}
+
+::selection {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+input {
+  caret-color: var(--primary);
+  accent-color: var(--primary);
+}

@@ -21,6 +21,11 @@ export default tseslint.config(
     },
   },
   {
+    // HT-AUTH-02 plan §11 (RN-11): el módulo de autenticación no escribe en la consola.
+    files: ['src/features/auth/**/*.{ts,tsx}'],
+    rules: { 'no-console': 'error' },
+  },
+  {
     files: ['eslint.config.js'],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },

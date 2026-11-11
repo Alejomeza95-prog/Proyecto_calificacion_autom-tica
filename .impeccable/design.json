@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-07T00:00:00Z",
+  "title": "Design System: OMR-PreICFES, módulo de autenticación",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Azul institucional", "canonical": "#1d3fae" },
+      "panel": { "role": "primary", "displayName": "Azul marino del panel", "canonical": "#12276a" },
+      "canvas": { "role": "neutral", "displayName": "Lienzo", "canonical": "#eef1f7" },
+      "surface": { "role": "neutral", "displayName": "Superficie", "canonical": "#ffffff" },
+      "ink": { "role": "neutral", "displayName": "Tinta", "canonical": "#141a2a" },
+      "ink-muted": { "role": "neutral", "displayName": "Tinta suave", "canonical": "#4a5468" },
+      "line": { "role": "neutral", "displayName": "Filete", "canonical": "#dde2ec" },
+      "danger": { "role": "secondary", "displayName": "Error", "canonical": "#b42318" },
+      "success-ink": { "role": "secondary", "displayName": "Éxito", "canonical": "#11613d" },
+      "review": { "role": "tertiary", "displayName": "Ámbar de revisión", "canonical": "#e8a317" }
+    },
+    "typographyMeta": {
+      "statement": { "displayName": "Declaración", "purpose": "Frase del producto en el panel institucional." },
+      "headline": { "displayName": "Título", "purpose": "Título de cada pantalla, en un h1 que recibe el foco al navegar." },
+      "body": { "displayName": "Descripción", "purpose": "Texto bajo el título." },
+      "label": { "displayName": "Etiqueta", "purpose": "Etiquetas de campo, errores y avisos." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 1px 2px rgb(16 24 40 / 0.05), 0 12px 32px -12px rgb(16 24 40 / 0.14)", "purpose": "Elevación suave de la tarjeta." },
+      { "name": "sheet", "value": "drop-shadow(0 22px 34px rgb(3 10 36 / 0.45))", "purpose": "Hoja OMR sobre el panel, solo en escritorio." }
+    ],
+    "motion": [
+      { "name": "fill-mark", "value": "520ms cubic-bezier(0.16, 1, 0.3, 1), 110ms entre marcas", "purpose": "Relleno en secuencia de las marcas de la hoja; se omite con movimiento reducido." },
+      { "name": "draw-ring", "value": "700ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Trazo del anillo de revisión después de la última marca; se omite con movimiento reducido." },
+      { "name": "spin", "value": "800ms linear infinite", "purpose": "Indicador del botón mientras envía; se omite con movimiento reducido." }
+    ],
+    "breakpoints": [
+      { "name": "tablet", "value": "40rem" },
+      { "name": "desktop", "value": "64rem" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Acción principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Una por pantalla, azul institucional, a todo el ancho de la tarjeta.",
+      "html": "<button class=\"ds-submit\">Iniciar sesión</button>",
+      "css": ".ds-submit { width: 100%; min-height: 3rem; padding: 0.75rem 1.5rem; border: 0; border-radius: 10px; background: #1d3fae; color: #fff; font-weight: 650; box-shadow: 0 1px 2px rgb(16 24 40 / 0.12); cursor: pointer; } .ds-submit:hover { background: #15307f; } .ds-submit:focus-visible { outline: 3px solid #1d3fae; outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Campo estándar con etiqueta visible y halo tintado al recibir el foco.",
+      "html": "<input class=\"ds-input\" aria-label=\"Correo\" value=\"docente@example.test\">",
+      "css": ".ds-input { height: 3rem; padding-inline: 0.875rem; border: 1px solid #7b8598; border-radius: 10px; background: #fff; color: #141a2a; font-size: 1rem; } .ds-input:focus-visible { border-color: #1d3fae; box-shadow: 0 0 0 4px #eef3fd; outline: 3px solid #1d3fae; outline-offset: 2px; }"
+    },
+    {
+      "name": "Aviso de error",
+      "kind": "custom",
+      "refersTo": "status-error",
+      "description": "Bloque tintado con icono y texto; los errores se anuncian como alert.",
+      "html": "<div class=\"ds-status\" role=\"alert\">El correo o la contraseña no coinciden. Revísalos e inténtalo de nuevo.</div>",
+      "css": ".ds-status { padding: 0.75rem 1rem; border: 1px solid #f2b8b0; border-radius: 10px; background: #fef0ee; color: #8f1c13; font-size: 0.9375rem; font-weight: 500; }"
+    },
+    {
+      "name": "Tarjeta",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenedor de cada pantalla: h1, descripción, formulario y pie con trámites relacionados.",
+      "html": "<div class=\"ds-card\"><h1>Iniciar sesión</h1><p>Entra con tu correo y tu contraseña.</p></div>",
+      "css": ".ds-card { max-width: 28rem; padding: 2.75rem; border: 1px solid #dde2ec; border-radius: 16px; background: #fff; box-shadow: 0 1px 2px rgb(16 24 40 / 0.05), 0 12px 32px -12px rgb(16 24 40 / 0.14); } .ds-card p { color: #4a5468; }"
+    },
+    {
+      "name": "Enlace secundario",
+      "kind": "link",
+      "description": "Trámite relacionado en el pie de la tarjeta; siempre subrayado.",
+      "html": "<a class=\"ds-link\" href=\"#\">Olvidé mi contraseña</a>",
+      "css": ".ds-link { display: inline-flex; align-items: center; min-height: 2.75rem; color: #1d3fae; font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; } .ds-link:hover { color: #15307f; text-decoration-thickness: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La hoja leída",
+    "overview": "La entrada muestra el producto haciendo su trabajo: un panel institucional con una hoja de respuestas OMR leída, donde una marca dudosa se envía a revisión, junto a una tarjeta de acceso sobria con una sola acción principal.",
+    "keyCharacteristics": [
+      "Panel azul marino institucional con el nombre, la declaración del producto y la hoja OMR en SVG.",
+      "Un solo azul como color de acción, sobre fondos claros y neutros fríos.",
+      "Tarjeta blanca con radio de 16 px y sombra suave; los trámites relacionados van en su pie.",
+      "Fuentes del sistema y ningún recurso externo."
+    ],
+    "rules": [
+      { "name": "The Un Solo Azul Rule", "body": "Toda acción usa el azul institucional; no hay colores por trámite.", "section": "colors" },
+      { "name": "The Nunca Solo Color Rule", "body": "Los estados siempre llevan icono y texto; el color nunca comunica un estado por sí solo.", "section": "colors" },
+      { "name": "The Sin Fuentes Externas Rule", "body": "Solo fuentes instaladas, porque las pantallas con token no cargan recursos externos (RN-07).", "section": "typography" }
+    ],
+    "dos": [
+      "Do usar una sola acción principal por pantalla.",
+      "Do decir qué pasó y qué sigue en cada resultado.",
+      "Do acompañar cada color de estado con un icono y un texto que comuniquen lo mismo.",
+      "Do mantener el contraste de 4.5:1 en texto y comprobarlo con axe."
+    ],
+    "donts": [
+      "Don't inventar logo, marca ni identidad corporativa global.",
+      "Don't cargar fuentes, imágenes ni scripts externos; la única excepción aprobada es Turnstile, en inicio de sesión y solo tras un desafío.",
+      "Don't usar colores por trámite ni un segundo color de acción.",
+      "Don't usar el ámbar de revisión fuera de la ilustración.",
+      "Don't animar sin respetar prefers-reduced-motion."
+    ]
+  }
+}

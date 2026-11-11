@@ -1,11 +1,18 @@
 import { resolve } from 'node:path';
 import mongoose from 'mongoose';
-import { loadMigrations, MigrationRunner } from '../database/migration-runner';
+import {
+  loadMigrations,
+  MigrationEnvironmentError,
+  MigrationRunner,
+  resolveMigrationNodeEnv,
+} from '../database/migration-runner';
 
 /**
  * `pnpm migrate:up | migrate:down [--to <id>] | migrate:status` (plan §7, DEC-12, T-38).
  * Requiere `pnpm build` (los scripts compilados viven en `dist/migrations`).
  * Solo usa MONGODB_URI y NODE_ENV; nunca imprime la URI ni otros valores de configuración.
+ * DEC-28: `NODE_ENV` es obligatoria, sin valor por defecto (código 2 antes de conectar); las semillas
+ * solo se aplican con `development` o `test`.
  */
 async function main(argv: readonly string[]): Promise<number> {
   const command = argv[0];
@@ -15,6 +22,15 @@ async function main(argv: readonly string[]): Promise<number> {
   }
   const toIndex = argv.indexOf('--to');
   const to = toIndex >= 0 ? argv[toIndex + 1] : undefined;
+
+  let nodeEnv: string;
+  try {
+    nodeEnv = resolveMigrationNodeEnv(process.env);
+  } catch (error) {
+    if (!(error instanceof MigrationEnvironmentError)) throw error;
+    process.stderr.write(`${error.message}\n`);
+    return 2;
+  }
 
   const uri = process.env.MONGODB_URI;
   if (!uri) {
@@ -29,13 +45,14 @@ async function main(argv: readonly string[]): Promise<number> {
     const db = connection.db;
     if (!db) throw new Error('Conexión a MongoDB sin base de datos');
     const runner = new MigrationRunner(
-      { db, nodeEnv: process.env.NODE_ENV ?? 'development', env: process.env },
+      { db, nodeEnv, env: process.env },
       loadMigrations(resolve(__dirname, '..', 'migrations')),
       (message) => process.stdout.write(`${message}\n`),
+      (message) => process.stderr.write(`${message}\n`),
     );
     if (command === 'status') {
       for (const s of await runner.status()) {
-        process.stdout.write(`${s.applied ? '[x]' : '[ ]'} ${s.id}${s.skipped ? ' (omitida en producción)' : ''}\n`);
+        process.stdout.write(`${s.applied ? '[x]' : '[ ]'} ${s.id}${s.skipped ? ' (omitida: solo development/test)' : ''}\n`);
       }
     } else if (command === 'up') {
       const applied = await runner.up();
