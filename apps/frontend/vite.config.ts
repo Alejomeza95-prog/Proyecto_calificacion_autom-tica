@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
       exclude: [...configDefaults.exclude, 'e2e/**'],
+      // Como máximo 2 procesos: con más, la contención de CPU y memoria hacía que las esperas de Testing Library
+      // (1 s) vencieran de forma intermitente. No se aumenta el timeout global (decisión del desarrollador, 2026-11-10).
+      maxWorkers: 2,
     },
   };
 });

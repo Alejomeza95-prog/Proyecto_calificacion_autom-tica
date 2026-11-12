@@ -4,7 +4,7 @@ import { setAccountFields } from './test-db.mjs';
 
 /**
  * Prepara cuentas para las pruebas (plan §10 y §15): la aprobación aún no existe en la interfaz, así que el paso a
- * ACTIVA se escribe en la base aislada (DEC-13).
+ * ACTIVA se escribe en la base aislada de la ejecución (DEC-14).
  */
 
 /** Solo para cuentas `@example.test` de la base aislada. */

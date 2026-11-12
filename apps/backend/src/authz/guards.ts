@@ -1,4 +1,4 @@
-import { Inject, Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
+import { Inject, Injectable, Logger, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AUTH_CONFIG } from '../config/config.module';
 import type { AuthConfig } from '../config/auth-config';
@@ -8,9 +8,10 @@ import { SessionsService } from '../sessions/sessions.service';
 import { AccountStatus } from '../users/account-status';
 import { UsersService } from '../users/users.service';
 import { AccessTokenService } from './access-token.service';
-import { IS_PUBLIC, ORIGIN_PROTECTED, REQUIRED_ROLES } from './decorators';
+import { IS_PUBLIC, ORIGIN_PROTECTED } from './decorators';
 import type { AuthenticatedRequest } from './principal';
-import { roleInstitutionViolation, type Role } from './role';
+import { roleInstitutionViolation } from './role';
+import { resolveRoutePolicy } from './route-policy';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -111,21 +112,32 @@ export class JwtAuthGuard implements CanActivate {
   }
 }
 
-/** Rol requerido por `@Roles()` (DEC-11); rol insuficiente dentro del alcance → 403 (DEC-14). */
+/**
+ * Autorización por rol con **denegación por defecto** (DEC-11, DEC-29); rol insuficiente → 403 (DEC-14).
+ * - `@Public()` sin política de roles → pasa (rutas públicas).
+ * - Ruta protegida sin `@Roles()` ni `@AnyActiveRole()`, política contradictoria en un mismo nivel o
+ *   intersección vacía entre clase y método → 403 para todos, con aviso en el log (sin datos personales).
+ * - Si no: el rol del principal (leído de `usuarios`) debe estar en la intersección de clase y método.
+ */
 @Injectable()
 export class RolesGuard implements CanActivate {
+  private readonly logger = new Logger(RolesGuard.name);
+
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
     if (context.getType() !== 'http') return true;
-    const roles = this.reflector.getAllAndOverride<Role[] | undefined>(REQUIRED_ROLES, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (!roles || roles.length === 0) return true;
+    const handler = context.getHandler();
+    const controller = context.getClass();
+    const policy = resolveRoutePolicy(this.reflector, handler, controller);
+    if (policy.kind === 'public') return true;
+    if (policy.kind === 'deny') {
+      this.logger.warn(`Ruta ${controller.name}.${handler.name} denegada por su política de roles: ${policy.reason}`);
+      throw new ProblemException(403, ProblemType.ACCESO_DENEGADO);
+    }
     const { principal } = context.switchToHttp().getRequest<AuthenticatedRequest>();
     if (!principal) throw unauthenticated();
-    if (principal.rol === null || !roles.includes(principal.rol)) {
+    if (principal.rol === null || !policy.roles.includes(principal.rol)) {
       throw new ProblemException(403, ProblemType.ACCESO_DENEGADO);
     }
     return true;

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { mongo } from 'mongoose';
+import { isLocalEnvironment, LOCAL_ENVIRONMENTS } from '../config/environments';
 import { MIGRACIONES_COLLECTION } from './migracion.schema';
 
 /**
@@ -10,6 +11,10 @@ import { MIGRACIONES_COLLECTION } from './migracion.schema';
  * - Si el checksum de un script ya aplicado cambió (o el script desapareció), aborta sin tocar nada.
  * - `down` revierte solo el último aplicado, o hasta `--to` (exclusivo).
  * - Nunca usa `syncIndexes()`: los índices solo los crean los scripts.
+ * - DEC-28: los scripts `nonProductionOnly` (semillas) solo se aplican con `NODE_ENV` en la lista de
+ *   entornos locales (`development`, `test`); con cualquier otro valor se omiten. Sin `NODE_ENV`, el
+ *   runner no se construye. Si una semilla ya consta aplicada fuera de esa lista, se advierte sin
+ *   modificar ni borrar datos.
  */
 
 /** Contexto que recibe cada script. Los scripts declaran una interfaz estructuralmente igual. */
@@ -22,7 +27,7 @@ export interface MigrationContext {
 export interface MigrationModule {
   readonly up: (ctx: MigrationContext) => Promise<void>;
   readonly down: (ctx: MigrationContext) => Promise<void>;
-  /** Scripts solo de desarrollo y pruebas (seed): el runner los omite con NODE_ENV=production. */
+  /** Scripts solo de desarrollo y pruebas (seed): el runner los omite fuera de `development`/`test` (DEC-28). */
   readonly nonProductionOnly?: boolean;
 }
 
@@ -45,10 +50,31 @@ export class MigrationIntegrityError extends Error {
   }
 }
 
+export class MigrationEnvironmentError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MigrationEnvironmentError';
+  }
+}
+
 export interface MigrationStatus {
   readonly id: string;
   readonly applied: boolean;
   readonly skipped: boolean;
+}
+
+/**
+ * `NODE_ENV` para las migraciones (DEC-28): obligatorio y sin valor por defecto. Ausente, vacío o solo
+ * espacios → `MigrationEnvironmentError`, antes de conectar a MongoDB.
+ */
+export function resolveMigrationNodeEnv(env: Readonly<Record<string, string | undefined>>): string {
+  const nodeEnv = env.NODE_ENV?.trim();
+  if (!nodeEnv) {
+    throw new MigrationEnvironmentError(
+      `NODE_ENV no está definida: las migraciones exigen un entorno explícito (las semillas solo se aplican con ${LOCAL_ENVIRONMENTS.join(' o ')})`,
+    );
+  }
+  return nodeEnv;
 }
 
 const MIGRATION_FILE = /^(\d{3}-[a-z0-9-]+)\.(ts|js)$/;
@@ -88,7 +114,11 @@ export class MigrationRunner {
     private readonly ctx: MigrationContext,
     private readonly migrations: readonly MigrationDefinition[],
     private readonly log: (message: string) => void = () => undefined,
+    private readonly warn: (message: string) => void = log,
   ) {
+    if (!ctx.nodeEnv.trim()) {
+      throw new MigrationEnvironmentError('NODE_ENV no está definida: el runner de migraciones no se ejecuta sin un entorno explícito');
+    }
     const ids = new Set<string>();
     for (const m of migrations) {
       if (ids.has(m.id)) throw new MigrationIntegrityError(`Migración duplicada: ${m.id}`);
@@ -97,12 +127,30 @@ export class MigrationRunner {
     this.records = ctx.db.collection<MigrationRecord>(MIGRACIONES_COLLECTION);
   }
 
-  private get isProduction(): boolean {
-    return this.ctx.nodeEnv === 'production';
+  /** Lista de entornos permitidos (DEC-28): cualquier valor fuera de `development`/`test` omite las semillas. */
+  private get allowsDevOnly(): boolean {
+    return isLocalEnvironment(this.ctx.nodeEnv);
   }
 
   private isSkipped(m: MigrationDefinition): boolean {
-    return this.isProduction && m.nonProductionOnly === true;
+    return m.nonProductionOnly === true && !this.allowsDevOnly;
+  }
+
+  /**
+   * Una semilla aplicada en un entorno no permitido (p. ej. antes de DEC-28) solo se advierte: no se
+   * revierte ni se borra ningún dato (decisión del responsable, 2026-11-09).
+   */
+  private warnDevOnlyAppliedOutsideAllowed(applied: ReadonlyMap<string, MigrationRecord>): void {
+    if (this.allowsDevOnly) return;
+    for (const m of this.migrations) {
+      if (m.nonProductionOnly === true && applied.has(m.id)) {
+        this.warn(
+          `ADVERTENCIA: la migración de solo desarrollo ${m.id} consta aplicada con NODE_ENV=${this.ctx.nodeEnv}, ` +
+            `fuera de ${LOCAL_ENVIRONMENTS.join('/')}. No se modificó ningún dato: revise si esta base contiene ` +
+            'cuentas sembradas (marcador seed: true) y retírelas con un procedimiento autorizado.',
+        );
+      }
+    }
   }
 
   /** Verifica que todo lo aplicado siga existiendo con el mismo checksum. No modifica nada. */
@@ -123,12 +171,14 @@ export class MigrationRunner {
 
   async status(): Promise<MigrationStatus[]> {
     const applied = await this.verifyIntegrity();
+    this.warnDevOnlyAppliedOutsideAllowed(applied);
     return this.migrations.map((m) => ({ id: m.id, applied: applied.has(m.id), skipped: this.isSkipped(m) }));
   }
 
   /** Aplica en orden los pendientes. Devuelve los ids aplicados en esta ejecución. */
   async up(): Promise<string[]> {
     const applied = await this.verifyIntegrity();
+    this.warnDevOnlyAppliedOutsideAllowed(applied);
     const done: string[] = [];
     for (const m of this.migrations) {
       if (applied.has(m.id)) continue;

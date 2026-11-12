@@ -1,5 +1,6 @@
 import { isIP } from 'node:net';
 import { parseDuration, parseRateLimitRule, type RateLimitRule } from './duration';
+import { isLocalEnvironment } from './environments';
 
 /**
  * Configuración de autenticación (plan HT-AUTH-01 §9.4, T-11).
@@ -100,7 +101,6 @@ export class ConfigValidationError extends Error {
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-const LOCAL_ENVS = new Set(['development', 'test']);
 const MIN_SECRET_LENGTH = 32;
 /** Hosts de captura local que nunca deben usarse en producción (DEC-05). */
 const LOCAL_SMTP_HOSTS = new Set(['mailpit', 'localhost', '127.0.0.1', '::1']);
@@ -201,7 +201,7 @@ export function normalizeOrigin(raw: string, requireHttps: boolean): string | nu
 export function loadAuthConfig(env: Env): AuthConfig {
   const r = new EnvReader(env);
   const nodeEnv = env.NODE_ENV?.trim() || 'development';
-  const isLocal = LOCAL_ENVS.has(nodeEnv);
+  const isLocal = isLocalEnvironment(nodeEnv);
 
   const mongodbUri = r.string('MONGODB_URI');
   const redisUrl = r.string('REDIS_URL');

@@ -1,10 +1,12 @@
-import { RequestMethod } from '@nestjs/common';
+import { RequestMethod, type Type } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import { ModulesContainer, Reflector } from '@nestjs/core';
 import { Types } from 'mongoose';
 import type { Response } from 'supertest';
 import { AuthController } from '../src/auth/auth.controller';
 import { REFRESH_COOKIE } from '../src/auth/refresh-cookie';
 import { Role } from '../src/authz/role';
+import { resolveRoutePolicy } from '../src/authz/route-policy';
 import { sha256Hex } from '../src/security-tokens/security-tokens.service';
 import { AccountStatus } from '../src/users/account-status';
 import { bearer, bootHttpApp, ORIGIN, refreshCookieFrom, TEST_PASSWORD, type HttpHarness } from './support/http-app';
@@ -35,6 +37,31 @@ function controllerRoutes(): string[] {
     .filter((fn) => Reflect.getMetadata(PATH_METADATA, fn) !== undefined)
     .map((fn) => `${RequestMethod[Reflect.getMetadata(METHOD_METADATA, fn) as RequestMethod]} ${String(Reflect.getMetadata(PATH_METADATA, fn))}`)
     .sort();
+}
+
+/**
+ * T-49 (DEC-29): política de cada ruta de **todos** los controladores registrados en la aplicación real.
+ * Una ruta sin política, con política contradictoria o con intersección vacía entre clase y método aparece
+ * como `deny`: la prueba de inventario la rechaza. Los controladores futuros quedan cubiertos sin tocar esta lista.
+ */
+function routePolicies(container: ModulesContainer): { ruta: string; policy: ReturnType<typeof resolveRoutePolicy> }[] {
+  const reflector = new Reflector();
+  const result: { ruta: string; policy: ReturnType<typeof resolveRoutePolicy> }[] = [];
+  const seen = new Set<Type>();
+  for (const moduleRef of container.values()) {
+    for (const wrapper of moduleRef.controllers.values()) {
+      const controller = wrapper.metatype as Type | null;
+      if (!controller || seen.has(controller)) continue;
+      seen.add(controller);
+      const proto = controller.prototype as Record<string, unknown>;
+      for (const name of Object.getOwnPropertyNames(proto)) {
+        const fn = proto[name];
+        if (name === 'constructor' || typeof fn !== 'function' || Reflect.getMetadata(PATH_METADATA, fn) === undefined) continue;
+        result.push({ ruta: `${controller.name}.${name}`, policy: resolveRoutePolicy(reflector, fn, controller) });
+      }
+    }
+  }
+  return result.sort((a, b) => a.ruta.localeCompare(b.ruta));
 }
 
 /**
@@ -87,6 +114,15 @@ describe('seguridad de la API de autenticación (T-31, e2e)', () => {
     await post('login', { correo: admin.correo, password: admin.password, rol: Role.DOCENTE }).expect(400);
     const doc = await h.usuarios.findById(admin.id).lean().orFail();
     expect(doc).toMatchObject({ rol: Role.ADMIN, institucion_id: null, version_credenciales: 0 });
+  });
+
+  it('T-49/DEC-29: inventario de TODOS los controladores registrados: cada ruta declara política y ninguna combinación de clase y método es contradictoria', () => {
+    const policies = routePolicies(h.app.get(ModulesContainer));
+    expect(policies.map((p) => p.ruta)).toEqual(expect.arrayContaining(['AuthController.me', 'AuthController.logout', 'HealthController.check']));
+    expect(policies.filter((p) => p.policy.kind === 'deny')).toEqual([]);
+    const everyRole = { kind: 'roles', roles: [Role.ADMIN, Role.COORDINADOR, Role.DOCENTE], public: false };
+    expect(policies.find((p) => p.ruta === 'AuthController.me')?.policy).toEqual(everyRole);
+    expect(policies.find((p) => p.ruta === 'AuthController.logout')?.policy).toEqual(everyRole);
   });
 
   it('RNF-06/DEC-20: matriz de Origin (ausente, null, ajeno, parcial, otro puerto, sufijo) en las 9 rutas POST → 403 sin efectos', async () => {

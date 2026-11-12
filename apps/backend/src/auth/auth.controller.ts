@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Header, HttpCode, Post, Req, Res } from '@nestjs/common';
-import { CurrentPrincipal, OriginProtected, Public } from '../authz/decorators';
+import { AnyActiveRole, CurrentPrincipal, OriginProtected, Public } from '../authz/decorators';
 import type { Principal } from '../authz/principal';
 import type { Role } from '../authz/role';
 import type { HttpRequest, HttpResponse } from '../common/http/http-types';
@@ -159,6 +159,8 @@ export class AuthController {
     return this.grant(response, grant);
   }
 
+  /** Cualquier cuenta ACTIVA autenticada (DEC-29). */
+  @AnyActiveRole()
   @Post('logout')
   @HttpCode(204)
   async logout(
@@ -170,6 +172,8 @@ export class AuthController {
     response.clearCookie(REFRESH_COOKIE, refreshCookieOptions());
   }
 
+  /** Cualquier cuenta ACTIVA autenticada (DEC-29). */
+  @AnyActiveRole()
   @Get('me')
   @Header('Cache-Control', 'no-store')
   me(@CurrentPrincipal() principal: Principal): MeResponse {

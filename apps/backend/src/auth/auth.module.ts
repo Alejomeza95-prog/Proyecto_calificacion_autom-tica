@@ -15,7 +15,8 @@ import { AuthController } from './auth.controller';
 /**
  * Capa HTTP de autenticación y autorización (Fase 3 de HT-AUTH-01: T-17 y T-19).
  * Guards globales en este orden: `OriginGuard` (DEC-20, antes de cualquier efecto) → `JwtAuthGuard`
- * (salvo `@Public()`) → `RolesGuard`. `ValidationPipe` global de DEC-21 y errores problem+json.
+ * (salvo `@Public()`) → `RolesGuard` (denegación por defecto: toda ruta protegida declara `@Roles()` o
+ * `@AnyActiveRole()`, DEC-29). `ValidationPipe` global de DEC-21 y errores problem+json.
  * El secreto y la vigencia del JWT se pasan en cada firma desde la configuración validada.
  */
 @Module({

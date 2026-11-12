@@ -5,7 +5,8 @@
     "outDir": "./dist/migrations",
     "incremental": false,
     "declaration": false,
-    "sourceMap": false
+    "sourceMap": false,
+    "newLine": "lf"
   },
   "include": ["migrations"]
 }

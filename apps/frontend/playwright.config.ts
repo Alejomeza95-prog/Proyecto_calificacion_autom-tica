@@ -1,9 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
-import { ACTIVATION_ORIGIN, APP_ORIGIN, TLS_ORIGIN } from './e2e/support/env.ts';
+import { ACTIVATION_BACKEND_ORIGIN, ACTIVATION_ORIGIN, APP_ORIGIN, BACKEND_ORIGIN, TLS_ORIGIN } from './e2e/support/env.ts';
 
 /**
- * E2E contra el backend real y aislado (DEC-13). Antes de ejecutar:
- *   node e2e/support/isolated-backend.mjs up
+ * E2E contra el backend real y aislado (DEC-14). Cada ejecución crea su entorno (RUN_ID, Redis temporal, base
+ * `omr_test_e2e_<RUN_ID>`) en `globalSetup` y lo limpia en `globalTeardown`; con `E2E_KEEP=1` lo conserva.
  * Chromium ejecuta la suite completa. Firefox y WebKit solo la compatibilidad (DEC-12): WebKit no envía la cookie
  * `Secure` sobre `http://localhost`, así que los flujos de sesión corren en ese motor sobre un proxy HTTPS de pruebas.
  * `e2e/manual/` se ejecuta aparte, con `playwright.produccion.config.ts`.
@@ -14,6 +14,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: 'list',
+  globalSetup: './e2e/support/global-setup.mjs',
+  globalTeardown: './e2e/support/global-teardown.mjs',
   use: { baseURL: APP_ORIGIN, trace: 'retain-on-failure' },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
@@ -31,14 +33,14 @@ export default defineConfig({
       url: APP_ORIGIN,
       reuseExistingServer: false,
       // La sitekey no se valida: el script de Turnstile se sustituye en las pruebas (DEC-06).
-      env: { API_PROXY_TARGET: 'http://127.0.0.1:3100', VITE_CAPTCHA_SITE_KEY: 'sitekey-solo-pruebas' },
+      env: { API_PROXY_TARGET: BACKEND_ORIGIN, VITE_CAPTCHA_SITE_KEY: 'sitekey-solo-pruebas' },
     },
     {
       // Hacia el backend de activación, que esa prueba levanta con una base nueva (`e2e/support/isolated-backend.mjs`).
       command: 'node node_modules/vite/bin/vite.js --port 5175',
       url: ACTIVATION_ORIGIN,
       reuseExistingServer: false,
-      env: { API_PROXY_TARGET: 'http://127.0.0.1:3101', VITE_CAPTCHA_SITE_KEY: 'sitekey-solo-pruebas' },
+      env: { API_PROXY_TARGET: ACTIVATION_BACKEND_ORIGIN, VITE_CAPTCHA_SITE_KEY: 'sitekey-solo-pruebas' },
     },
     {
       command: 'node e2e/support/tls-proxy.mjs',

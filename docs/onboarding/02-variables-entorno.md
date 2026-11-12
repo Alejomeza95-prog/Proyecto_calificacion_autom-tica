@@ -40,7 +40,7 @@ La API valida estas variables al arrancar: si falta una o tiene formato inválid
 
 | Variable | Secreta | Consumida por | Descripción |
 |---|---|---|---|
-| `NODE_ENV` | No | NestJS | `development`, `test` o `production`. Fuera de `development`/`test` se exige https y se rechazan Mailpit y el CAPTCHA de prueba. |
+| `NODE_ENV` | No (API) / **Sí** (`pnpm migrate:*`) | NestJS, migraciones | `development`, `test` o `production`. Fuera de `development`/`test` se exige https y se rechazan Mailpit y el CAPTCHA de prueba. `pnpm migrate:*` no se ejecuta sin `NODE_ENV` (no la lee de `.env`: expórtala en la consola) y solo aplica las semillas con `development` o `test`; con cualquier otro valor las omite (DEC-28). |
 | `APP_PUBLIC_URL` | No | NestJS (`LinkBuilder`) | Origen del frontend para los enlaces de correo (RN-13). Debe estar en `AUTH_ALLOWED_ORIGINS`. |
 | `AUTH_ALLOWED_ORIGINS` | No | NestJS (`Origin` y CORS) | Orígenes completos separados por coma, sin ruta, sin `*` y sin `null` (DEC-20). |
 | `JWT_ACCESS_SECRET` | Sí | NestJS | Firma del JWT de acceso. Mínimo 32 caracteres aleatorios. |
@@ -81,7 +81,7 @@ La API valida estas variables al arrancar: si falta una o tiene formato inválid
 | `METRICS_PORT` | No | NestJS | Puerto del servidor **interno** de métricas (`GET /metrics`, T-47, DEC-25); `0` lo deshabilita. Distinto del de la API; nunca publicarlo fuera de la red interna. |
 | `METRICS_HOST` | No | NestJS | Dirección IP en la que escucha el servidor de métricas (`127.0.0.1` en el host). |
 | `AUDIT_IP_PEPPER` | Sí | NestJS | Secreto del HMAC de la IP en `auditoria_auth`. Mínimo 32 caracteres. |
-| `SEED_DEV_PASSWORD` | Sí | `pnpm migrate:up` (seed `002`) | Solo desarrollo y pruebas: contraseña de las cuentas semilla (mínimo 12 caracteres). Nunca se versiona. |
+| `SEED_DEV_PASSWORD` | Sí | `pnpm migrate:up` (seed `002`) | Solo desarrollo y pruebas (`NODE_ENV=development` o `test`, DEC-28): contraseña de las cuentas semilla (mínimo 12 caracteres). Nunca se versiona ni se define fuera de local. |
 
 Generar un secreto aleatorio localmente, sin pegarlo en servicios externos:
 
