@@ -1,10 +1,10 @@
 ---
 id: HT-AUTH-03
 title: Administración de cuentas, navegación principal, claves de respuesta y verificación manual
-status: in-progress      # draft | ready | in-progress | in-review | done
+status: in-review        # draft | ready | in-progress | in-review | done
 owner: JhonDc
 branch: feature/HT-AUTH-03
-updated: 2026-11-11
+updated: 2026-11-14
 ---
 
 # HT-AUTH-03 — Administración de cuentas, navegación principal, claves de respuesta y verificación manual
@@ -238,3 +238,5 @@ Todas resueltas por el desarrollador responsable (JhonDc) el 2026-11-11, que del
 |---|---|---|
 | 2026-11-11 | Creación con `/sdd-spec`. **Requisitos aportados por JhonDc el 2026-11-11**: (1) panel de usuarios para aprobar cuentas de PENDIENTE_APROBACION a ACTIVA; (2) menú lateral para la navegación principal; (3) CRUD de clave de respuestas: selección de nombre de la prueba, fecha, sesión y materia (MAT, CN, CC, LC, ING), grilla dinámica según la cantidad de preguntas por materia, respuestas limitadas a A, B, C y D, guardar la clave y que sea editable, con estados Borrador y Publicada; (4) casilla «Verificada» vinculada a la resolución manual para confirmar marcas dudosas del OMR. Se pidió incluir criterios de aceptación, modelos MongoDB y endpoints NestJS. Pendiente: guardar estos requisitos en `docs/requisitos/historias/HT-AUTH-03.md`. | Requisitos aportados por JhonDc |
 | 2026-11-11 | **Resolución de las OPEN QUESTIONS y aprobación.** El responsable aprobó la spec y delegó la resolución de §12 aceptando las propuestas: catálogos mínimos de instituciones (siembra) y pruebas; Sesión 1 y Sesión 2; 1 a 100 preguntas; clave Publicada de solo consulta (corrección en HU-EVAL-002); permisos ADMIN/COORDINADOR completos y DOCENTE de consulta; COORDINADOR no aprueba cuentas; RN-03, RN-10, RN-12 y RN-14 confirmadas; revisión manual por ADMIN/COORDINADOR, BLANK válido y endpoint de verificación trasladado a OMR-002; historia única. RN-01, RN-08, RN-11, §3, §4, §8, §9, CA-06, CA-07 y CA-13 actualizados con esos valores. Ningún ID cambia de número. Estado draft → ready. | Decisión de JhonDc (2026-11-11) |
+| 2026-11-12 | `/sdd-release`: Definition of Done verificada; estado in-progress → in-review | Release |
+| 2026-11-14 | `/sdd-release` repetido tras la corrección T-33 (alta de pruebas por el ADMIN con `institucionId`, plan §3.3; sin cambio de requisitos ni de CA). Regresión completa en verde; sigue in-review | Release |
