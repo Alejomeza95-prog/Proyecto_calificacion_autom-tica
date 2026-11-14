@@ -186,6 +186,74 @@ describe('editor de claves (CA-06..CA-10)', () => {
     });
   });
 
+  describe('CA-06: agregar una prueba al catálogo (DEC-04, DEC-06)', () => {
+    const NUEVA = { id: '66a000000000000000000009', nombre: 'Simulacro nuevo', institucionId: '65f000000000000000000003' };
+    const INSTITUCIONES = {
+      'GET /api/v1/instituciones': () =>
+        json(200, [
+          { id: '65f000000000000000000002', nombre: 'Institución A' },
+          { id: NUEVA.institucionId, nombre: 'Institución B' },
+        ]),
+    };
+
+    it('el ADMIN elige la institución, la prueba se crea con institucionId y queda seleccionada', async () => {
+      const fake = renderApp(APP_ROUTES.claveNueva, 'ADMIN', {
+        ...INSTITUCIONES,
+        'GET /api/v1/pruebas': [() => json(200, [PRUEBA]), () => json(200, [PRUEBA, NUEVA])],
+        'POST /api/v1/pruebas': () => json(201, NUEVA),
+      });
+      const institucion = await screen.findByLabelText('Institución de la prueba nueva');
+      await waitFor(() => expect(institucion).toBeEnabled());
+      fireEvent.change(screen.getByLabelText('¿No está la prueba? Agrégala'), { target: { value: '  Simulacro nuevo ' } });
+
+      // Sin institución no se envía nada.
+      fireEvent.click(screen.getByRole('button', { name: 'Agregar prueba' }));
+      expect(await screen.findByText('Selecciona la institución a la que pertenece la prueba.')).toBeInTheDocument();
+      expect(fake.count('POST /api/v1/pruebas')).toBe(0);
+
+      fireEvent.change(institucion, { target: { value: NUEVA.institucionId } });
+      fireEvent.click(screen.getByRole('button', { name: 'Agregar prueba' }));
+      await waitFor(() => expect(screen.getByLabelText('Nombre de la prueba')).toHaveValue(NUEVA.id));
+      expect(screen.getByRole('option', { name: 'Simulacro nuevo · Institución B' })).toBeInTheDocument();
+      const body: unknown = JSON.parse(fake.calls.find((c) => c.route === 'POST /api/v1/pruebas')?.rawBody ?? '{}');
+      expect(body).toEqual({ nombre: 'Simulacro nuevo', institucionId: NUEVA.institucionId });
+    });
+
+    it('el COORDINADOR no ve el selector de institución ni consulta /instituciones', async () => {
+      const fake = renderApp(APP_ROUTES.claveNueva, 'COORDINADOR', {
+        'GET /api/v1/pruebas': [() => json(200, [PRUEBA]), () => json(200, [PRUEBA, NUEVA])],
+        'POST /api/v1/pruebas': () => json(201, NUEVA),
+      });
+      await waitFor(() => expect(screen.getByLabelText('Nombre de la prueba')).toBeEnabled());
+      expect(screen.queryByLabelText('Institución de la prueba nueva')).not.toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('¿No está la prueba? Agrégala'), { target: { value: 'Simulacro nuevo' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Agregar prueba' }));
+      await waitFor(() => expect(screen.getByLabelText('Nombre de la prueba')).toHaveValue(NUEVA.id));
+      const body: unknown = JSON.parse(fake.calls.find((c) => c.route === 'POST /api/v1/pruebas')?.rawBody ?? '{}');
+      expect(body).toEqual({ nombre: 'Simulacro nuevo' });
+      expect(fake.count('GET /api/v1/instituciones')).toBe(0);
+    });
+
+    it('los errores del servidor se muestran con un mensaje descriptivo', async () => {
+      renderApp(APP_ROUTES.claveNueva, 'ADMIN', {
+        ...INSTITUCIONES,
+        ...PRUEBAS,
+        'POST /api/v1/pruebas': [
+          () => problem(400, 'solicitud-invalida', { errores: [{ campo: 'institucionId', reglas: ['institucionVigente'] }] }),
+          () => problem(409, 'conflicto'),
+        ],
+      });
+      const institucion = await screen.findByLabelText('Institución de la prueba nueva');
+      await waitFor(() => expect(institucion).toBeEnabled());
+      fireEvent.change(institucion, { target: { value: NUEVA.institucionId } });
+      fireEvent.change(screen.getByLabelText('¿No está la prueba? Agrégala'), { target: { value: 'Simulacro 1' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Agregar prueba' }));
+      expect(await screen.findByText('Selecciona una institución activa para la prueba.')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Agregar prueba' }));
+      expect(await screen.findByText('Esa institución ya tiene una prueba con ese nombre.')).toBeInTheDocument();
+    });
+  });
+
   it('CA-07: cantidad fuera de rango o campos vacíos no se envían', async () => {
     const fake = renderApp(APP_ROUTES.claveNueva, 'COORDINADOR', PRUEBAS);
     await waitFor(() => expect(screen.getByLabelText('Nombre de la prueba')).toBeEnabled());

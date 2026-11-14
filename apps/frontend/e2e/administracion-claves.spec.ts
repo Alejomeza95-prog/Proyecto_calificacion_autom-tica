@@ -98,6 +98,20 @@ test('T-27: el ADMIN aprueba una cuenta y el COORDINADOR crea, edita y publica u
   await expectNoSeriousViolations(page);
 });
 
+test('CA-06: el ADMIN agrega una prueba indicando la institución y queda seleccionada', async ({ page }) => {
+  const admin = await createActiveAccount('ht03-admin-prueba');
+  await login(page, admin);
+  await nav(page).getByRole('link', { name: 'Claves de respuesta' }).click();
+  await page.getByRole('link', { name: 'Nueva clave' }).click();
+  const prueba = `Simulacro ADMIN ${Date.now()}`;
+  await page.getByLabel('Institución de la prueba nueva').selectOption({ label: INSTITUCION_A });
+  await page.getByLabel('¿No está la prueba? Agrégala').fill(prueba);
+  await page.getByRole('button', { name: 'Agregar prueba' }).click();
+  await expect(page.getByLabel('Nombre de la prueba')).toHaveValue(/[0-9a-f]{24}/);
+  await expect(page.getByLabel('Nombre de la prueba').locator('option:checked')).toHaveText(`${prueba} · ${INSTITUCION_A}`);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
 test.describe('T-28: pantallas angostas (CA-05)', () => {
   test.use({ viewport: { width: 375, height: 740 } });
 

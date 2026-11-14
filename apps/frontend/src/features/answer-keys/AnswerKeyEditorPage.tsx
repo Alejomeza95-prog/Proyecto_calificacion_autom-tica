@@ -5,10 +5,11 @@ import { ApiError, isApiError } from '../auth/api/problem.ts';
 import { StatusMessage } from '../auth/components/StatusMessage.tsx';
 import { useResultFocus } from '../auth/forms/use-result-focus.ts';
 import { useSession } from '../auth/session/session-context.ts';
+import { listInstitutions, type Institution } from '../admin-users/admin-users-api.ts';
 import { AppShell } from '../navigation/AppShell.tsx';
 import page from '../navigation/page.module.css';
 import { hasRole, ROLES_EDICION_CLAVES } from '../navigation/permissions.ts';
-import { genericErrorMessage, useLoad } from '../navigation/use-load.ts';
+import { genericErrorMessage, useLoad, type LoadState } from '../navigation/use-load.ts';
 import { answeredBeyond, joinNumbers, missingQuestions, parseQuestionCount, resize } from './answer-key-rules.ts';
 import {
   createClave,
@@ -57,13 +58,46 @@ function saveErrorMessage(error: ApiError): string {
   }
 }
 
-/** Formulario mínimo para agregar una prueba al catálogo de la institución (DEC-04). */
-function AddPrueba({ onCreated }: { readonly onCreated: (id: string) => void }) {
+function addPruebaErrorMessage(error: ApiError, needsInstitution: boolean): string {
+  switch (error.kind) {
+    case 'conflicto':
+      return needsInstitution ? 'Esa institución ya tiene una prueba con ese nombre.' : 'Ya existe una prueba con ese nombre.';
+    case 'solicitud-invalida':
+      if (error.fields.includes('institucionId')) {
+        return needsInstitution
+          ? 'Selecciona una institución activa para la prueba.'
+          : 'Tu institución no está activa. Pide a un administrador que la revise.';
+      }
+      if (error.fields.includes('nombre')) return 'El nombre de la prueba debe tener entre 1 y 200 caracteres.';
+      return 'Revisa los datos de la prueba e inténtalo de nuevo.';
+    case 'no-encontrado':
+      return 'La institución indicada no está disponible para tu cuenta.';
+    default:
+      return genericErrorMessage(error);
+  }
+}
+
+interface AddPruebaProps {
+  /** Solo para el ADMIN (alcance global): la prueba debe asociarse a una institución (plan §3.3). */
+  readonly instituciones: LoadState<readonly Institution[]> | null;
+  readonly onCreated: (id: string) => void;
+}
+
+/** Formulario mínimo para agregar una prueba al catálogo de una institución (DEC-04, DEC-06). */
+function AddPrueba({ instituciones, onCreated }: AddPruebaProps) {
   const { request } = useSession();
+  const needsInstitution = instituciones !== null;
   const [nombre, setNombre] = useState('');
+  const [institucionId, setInstitucionId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const inputId = useId();
+  const institucionInputId = useId();
+
+  // Con una sola institución disponible se preselecciona.
+  const institutionList = instituciones?.estado === 'listo' ? instituciones.data : [];
+  const onlyInstitution = institutionList.length === 1 ? institutionList[0] : undefined;
+  const selectedInstitution = institucionId !== '' ? institucionId : (onlyInstitution?.id ?? '');
 
   async function handleAdd() {
     if (pending) return;
@@ -71,14 +105,18 @@ function AddPrueba({ onCreated }: { readonly onCreated: (id: string) => void }) 
       setError('Escribe el nombre de la prueba.');
       return;
     }
+    if (needsInstitution && selectedInstitution === '') {
+      setError('Selecciona la institución a la que pertenece la prueba.');
+      return;
+    }
     setPending(true);
     try {
-      const prueba = await createPrueba(request, nombre.trim());
+      const prueba = await createPrueba(request, nombre.trim(), needsInstitution ? selectedInstitution : undefined);
       setNombre('');
       setError(null);
       onCreated(prueba.id);
     } catch (caught) {
-      setError(isApiError(caught, 'conflicto') ? 'Ya existe una prueba con ese nombre.' : isApiError(caught) ? genericErrorMessage(caught) : 'No pudimos agregar la prueba.');
+      setError(isApiError(caught) ? addPruebaErrorMessage(caught, needsInstitution) : 'No pudimos agregar la prueba. Inténtalo de nuevo.');
     } finally {
       setPending(false);
     }
@@ -86,6 +124,34 @@ function AddPrueba({ onCreated }: { readonly onCreated: (id: string) => void }) 
 
   return (
     <div className={page.field} style={{ minWidth: '16rem' }}>
+      {needsInstitution && (
+        <>
+          <label className={page.label} htmlFor={institucionInputId}>
+            Institución de la prueba nueva
+          </label>
+          <select
+            id={institucionInputId}
+            className={page.select}
+            value={selectedInstitution}
+            disabled={instituciones.estado !== 'listo'}
+            aria-invalid={error !== null && selectedInstitution === '' ? true : undefined}
+            onChange={(e) => setInstitucionId(e.target.value)}
+          >
+            <option value="">
+              {instituciones.estado === 'cargando'
+                ? 'Cargando…'
+                : instituciones.estado === 'error'
+                  ? 'No se pudieron cargar las instituciones'
+                  : 'Selecciona una institución'}
+            </option>
+            {institutionList.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.nombre}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
       <label className={page.label} htmlFor={inputId}>
         ¿No está la prueba? Agrégala
       </label>
@@ -129,9 +195,17 @@ export function AnswerKeyEditorPage() {
   const location = useLocation();
   const rol = session.estado === 'autenticada' ? session.usuario.rol : null;
   const canEdit = hasRole(rol, ROLES_EDICION_CLAVES);
+  const isGlobal = rol === 'ADMIN';
 
   const loadPruebas = useCallback(() => listPruebas(request), [request]);
   const { state: pruebas, reload: reloadPruebas } = useLoad(loadPruebas);
+  // Solo el ADMIN consulta las instituciones (la ruta es exclusiva de ADMIN) para asociar la prueba nueva.
+  const loadInstituciones = useCallback(
+    () => (isGlobal && isNew ? listInstitutions(request) : Promise.resolve<Institution[]>([])),
+    [request, isGlobal, isNew],
+  );
+  const { state: instituciones } = useLoad(loadInstituciones);
+  const institutionNames = new Map(instituciones.estado === 'listo' ? instituciones.data.map((i) => [i.id, i.nombre]) : []);
   const loadExisting = useCallback(() => (id === undefined ? Promise.resolve(null) : getClave(request, id)), [request, id]);
   const { state: existing, reload: reloadExisting } = useLoad(loadExisting);
 
@@ -414,7 +488,7 @@ export function AnswerKeyEditorPage() {
                 {pruebas.estado === 'listo' &&
                   pruebas.data.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.nombre}
+                      {isGlobal && institutionNames.has(p.institucionId) ? `${p.nombre} · ${institutionNames.get(p.institucionId)}` : p.nombre}
                     </option>
                   ))}
               </select>
@@ -472,6 +546,7 @@ export function AnswerKeyEditorPage() {
             </div>
             {canEdit && (
               <AddPrueba
+                instituciones={isGlobal ? instituciones : null}
                 onCreated={(pruebaId) => {
                   setIdentity((current) => ({ ...current, pruebaId }));
                   reloadPruebas();

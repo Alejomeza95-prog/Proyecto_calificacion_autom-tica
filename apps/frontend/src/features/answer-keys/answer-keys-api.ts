@@ -127,8 +127,13 @@ export async function listPruebas(request: ApiRequest): Promise<Prueba[]> {
   return data.map(toPrueba);
 }
 
-export async function createPrueba(request: ApiRequest, nombre: string): Promise<Prueba> {
-  return toPrueba(await request('/pruebas', { method: 'POST', body: { nombre } }));
+/**
+ * Alta de prueba (DEC-04). El ADMIN tiene alcance global y debe indicar `institucionId` (plan §3.3); un rol
+ * institucional lo omite y el backend usa su institución.
+ */
+export async function createPrueba(request: ApiRequest, nombre: string, institucionId?: string): Promise<Prueba> {
+  const body = institucionId === undefined ? { nombre } : { nombre, institucionId };
+  return toPrueba(await request('/pruebas', { method: 'POST', body }));
 }
 
 export async function listClaves(request: ApiRequest, filters: ClaveFilters, limite = 100): Promise<ClavePage> {
