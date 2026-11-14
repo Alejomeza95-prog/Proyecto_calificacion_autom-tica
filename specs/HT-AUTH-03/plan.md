@@ -3,7 +3,7 @@ id: HT-AUTH-03
 spec: ./spec.md
 status: ready            # draft | ready  (solo el desarrollador marca ready)
 owner: JhonDc
-updated: 2026-11-11
+updated: 2026-11-14
 ---
 
 # HT-AUTH-03 — Plan técnico
@@ -76,6 +76,8 @@ Guards existentes: JwtAuthGuard → RolesGuard; alcance con InstitutionScopePoli
 | `schemaVersion` | Number | sí | `default: 1` | | no |
 | `nombre` | String | sí | `trim`, `minlength: 1`, `maxlength: 200` | | no |
 | `activa` | Boolean | sí | `default: true` | | no |
+
+- **Institución por defecto (T-34, ajuste del 2026-11-14):** al arrancar la API con `NODE_ENV=development`, si `instituciones` está vacía, `InstitucionPorDefectoLifecycle` (`OnApplicationBootstrap`) crea «Institución Educativa Demo» con el upsert idempotente de `crearInstitucion`. No actúa con `test` (cada suite siembra sus instituciones) ni en producción, donde las altas siguen siendo controladas con `instituciones:crear` (DEC-03). Un fallo se registra y no detiene el arranque.
 
 ### 3.3 `pruebas` (DEC-04)
 - Alta por ADMIN y COORDINADOR (DEC-06); el COORDINADOR solo en su institución, el ADMIN indica `institucionId`.
@@ -342,3 +344,4 @@ Integración contra MongoDB 7 de Compose con base aislada por suite (`HT-AUTH-01
 | 2026-11-11 | Creación con `/sdd-spec` | spec §14 | — → draft |
 | 2026-11-11 | Decisiones DEC-01..DEC-09 aprobadas; `SESIONES` y `MAX_PREGUNTAS` fijados; roles de §8 concretados; endpoint de verificación e índices de `resoluciones_manuales` trasladados a OMR-002; DT-09 y DT-04 dejan de bloquear; §15 resuelta; checklist §16 completo | spec §12 y §14 (decisión de JhonDc) | draft → ready |
 | 2026-11-11 | **Ajustes de implementación** (`/sdd-implement`, sin cambio de comportamiento de la spec): (1) §3.5 agrega el evento `PRUEBA_CREADA` y el recurso `prueba` (el alta de pruebas de DEC-04 también se audita, RN-17); (2) §2.1 y §7: migración `004-seed-instituciones-dev` y comando `instituciones:crear` materializan la «siembra controlada» de DEC-03; (3) aprobar exige una institución existente y activa (400 `institucionVigente`), y crear una prueba con una institución ajena responde 404 (RN-13); (4) `ManualReviewService`: una marca ya verificada no se modifica (409), para que la confirmación de RN-16 no cambie en silencio; (5) frontend: `/inicio` pasa a mostrarse dentro de `AppShell` y el cierre de sesión de HT-AUTH-02 se mueve al menú lateral (CA-04); las rutas nuevas viven en `APP_ROUTES`, separadas de `ROUTES` de autenticación; el controlador de sesión expone `request` para `/api/v1` sin sacar el token (HT-AUTH-02 RN-02); (6) pruebas: el arnés E2E acepta la lista de migraciones y `migrations.int-spec.ts` (HT-AUTH-01) se acota a 001 y 002. Pendiente de confirmación del responsable en la revisión del PR | Implementación de HT-AUTH-03 | ready → ready |
+| 2026-11-14 | **Ajuste pedido por JhonDc** (sin cambio de CA): §3.2 agrega la institución por defecto al arrancar en desarrollo con el catálogo vacío (T-34), para que el ADMIN pueda dar de alta pruebas en una base limpia; complementa la siembra controlada de DEC-03 sin reemplazarla. Además, T-33 corrige el frontend para enviar `institucionId` en el alta de pruebas del ADMIN, como ya decía §3.3. Pendiente de confirmación del responsable en la revisión del PR | Reporte y pedido de JhonDc (2026-11-14) | ready → ready |

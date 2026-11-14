@@ -1,7 +1,7 @@
 import { Types, type Connection } from 'mongoose';
 import { ClaveRespuesta, ClaveRespuestaSchema } from '../../src/answer-keys/clave-respuesta.schema';
 import { AuditoriaAdmin, AuditoriaAdminSchema } from '../../src/audit/auditoria-admin.schema';
-import { crearInstitucion } from '../../src/instituciones/crear-institucion';
+import { asegurarInstitucionPorDefecto, crearInstitucion, INSTITUCION_POR_DEFECTO } from '../../src/instituciones/crear-institucion';
 import { Institucion, InstitucionSchema } from '../../src/instituciones/institucion.schema';
 import { ResolucionManual, ResolucionManualSchema } from '../../src/manual-review/resolucion-manual.schema';
 import { Prueba, PruebaSchema } from '../../src/pruebas/prueba.schema';
@@ -108,6 +108,28 @@ describe('HT-AUTH-03 persistencia (T-01..T-05, T-16)', () => {
 
     it('rechaza nombre vacío', async () => {
       await expect(m.instituciones.create({ nombre: '   ' })).rejects.toThrow(/nombre/);
+    });
+
+    it('T-34: en desarrollo con el catálogo vacío crea la institución por defecto, una sola vez', async () => {
+      await m.instituciones.deleteMany({});
+      const creada = await asegurarInstitucionPorDefecto(testDb.db, 'development');
+      expect(creada.accion).toBe('creada');
+      expect(await asegurarInstitucionPorDefecto(testDb.db, 'development')).toEqual({ accion: 'omitida', motivo: 'catalogo-con-datos' });
+      const docs = await m.instituciones.find({}).lean().exec();
+      expect(docs).toHaveLength(1);
+      expect(docs[0]).toMatchObject({ nombre: INSTITUCION_POR_DEFECTO, activa: true, schemaVersion: 1 });
+      expect(creada.accion === 'creada' && docs[0]?._id.toHexString()).toBe(creada.accion === 'creada' && creada.id);
+    });
+
+    it('T-34: con instituciones existentes, en test o en producción no crea nada', async () => {
+      await m.instituciones.deleteMany({});
+      for (const nodeEnv of ['test', 'production', 'staging']) {
+        expect(await asegurarInstitucionPorDefecto(testDb.db, nodeEnv)).toEqual({ accion: 'omitida', motivo: 'entorno' });
+      }
+      expect(await m.instituciones.countDocuments()).toBe(0);
+      await crearInstitucion(testDb.db, 'Colegio Existente');
+      expect(await asegurarInstitucionPorDefecto(testDb.db, 'development')).toEqual({ accion: 'omitida', motivo: 'catalogo-con-datos' });
+      expect(await m.instituciones.countDocuments({ nombre: INSTITUCION_POR_DEFECTO })).toBe(0);
     });
   });
 

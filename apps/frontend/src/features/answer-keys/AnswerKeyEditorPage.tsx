@@ -94,7 +94,7 @@ function AddPrueba({ instituciones, onCreated }: AddPruebaProps) {
   const inputId = useId();
   const institucionInputId = useId();
 
-  // Con una sola institución disponible se preselecciona.
+  // Con una sola institución disponible se preselecciona (también se envía si el ADMIN no toca el selector).
   const institutionList = instituciones?.estado === 'listo' ? instituciones.data : [];
   const onlyInstitution = institutionList.length === 1 ? institutionList[0] : undefined;
   const selectedInstitution = institucionId !== '' ? institucionId : (onlyInstitution?.id ?? '');
@@ -150,6 +150,11 @@ function AddPrueba({ instituciones, onCreated }: AddPruebaProps) {
               </option>
             ))}
           </select>
+          {instituciones.estado === 'listo' && institutionList.length === 0 && (
+            <StatusMessage tone="info">
+              No hay instituciones registradas. Pide a quien administra el servidor que cree una para poder agregar pruebas.
+            </StatusMessage>
+          )}
         </>
       )}
       <label className={page.label} htmlFor={inputId}>

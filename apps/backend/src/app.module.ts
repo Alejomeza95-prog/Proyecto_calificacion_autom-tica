@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
+import { InstitucionPorDefectoLifecycle } from './instituciones/institucion-por-defecto.lifecycle';
 import { MetricsServerLifecycle } from './observability/metrics-server';
 
 /**
@@ -18,6 +19,7 @@ import { MetricsServerLifecycle } from './observability/metrics-server';
   imports: [AppConfigModule, DatabaseModule, AuthCoreModule, AuthModule, AdministrationModule],
   controllers: [HealthController],
   // Servidor interno de métricas (T-47, DEC-25); el CLI `bootstrap:admin` no lo usa.
-  providers: [MetricsServerLifecycle],
+  // Institución por defecto solo en desarrollo y con el catálogo vacío (HT-AUTH-03 T-34).
+  providers: [MetricsServerLifecycle, InstitucionPorDefectoLifecycle],
 })
 export class AppModule {}

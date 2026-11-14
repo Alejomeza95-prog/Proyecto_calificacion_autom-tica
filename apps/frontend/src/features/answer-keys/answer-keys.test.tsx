@@ -219,6 +219,26 @@ describe('editor de claves (CA-06..CA-10)', () => {
       expect(body).toEqual({ nombre: 'Simulacro nuevo', institucionId: NUEVA.institucionId });
     });
 
+    it('con una sola institución, queda preseleccionada y se envía sin tocar el selector', async () => {
+      const fake = renderApp(APP_ROUTES.claveNueva, 'ADMIN', {
+        'GET /api/v1/instituciones': () => json(200, [{ id: NUEVA.institucionId, nombre: 'Institución Educativa Demo' }]),
+        'GET /api/v1/pruebas': [() => json(200, []), () => json(200, [NUEVA])],
+        'POST /api/v1/pruebas': () => json(201, NUEVA),
+      });
+      const institucion = await screen.findByLabelText('Institución de la prueba nueva');
+      await waitFor(() => expect(institucion).toHaveValue(NUEVA.institucionId));
+      fireEvent.change(screen.getByLabelText('¿No está la prueba? Agrégala'), { target: { value: 'Simulacro nuevo' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Agregar prueba' }));
+      await waitFor(() => expect(screen.getByLabelText('Nombre de la prueba')).toHaveValue(NUEVA.id));
+      const body: unknown = JSON.parse(fake.calls.find((c) => c.route === 'POST /api/v1/pruebas')?.rawBody ?? '{}');
+      expect(body).toEqual({ nombre: 'Simulacro nuevo', institucionId: NUEVA.institucionId });
+    });
+
+    it('sin instituciones registradas, explica por qué no se puede agregar la prueba', async () => {
+      renderApp(APP_ROUTES.claveNueva, 'ADMIN', { 'GET /api/v1/instituciones': () => json(200, []), ...PRUEBAS });
+      expect(await screen.findByText(/No hay instituciones registradas/)).toBeInTheDocument();
+    });
+
     it('el COORDINADOR no ve el selector de institución ni consulta /instituciones', async () => {
       const fake = renderApp(APP_ROUTES.claveNueva, 'COORDINADOR', {
         'GET /api/v1/pruebas': [() => json(200, [PRUEBA]), () => json(200, [PRUEBA, NUEVA])],

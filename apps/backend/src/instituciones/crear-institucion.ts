@@ -30,3 +30,28 @@ export async function crearInstitucion(
   if (!id) throw new Error('No se pudo crear ni encontrar la institución');
   return { creada: result.lastErrorObject?.updatedExisting === false, id: id.toHexString() };
 }
+
+/** Nombre de la institución que se crea al arrancar en desarrollo si el catálogo está vacío. */
+export const INSTITUCION_POR_DEFECTO = 'Institución Educativa Demo';
+
+export type ResultadoInstitucionPorDefecto =
+  | { readonly accion: 'creada'; readonly id: string }
+  | { readonly accion: 'omitida'; readonly motivo: 'entorno' | 'catalogo-con-datos' };
+
+/**
+ * Institución por defecto (HT-AUTH-03 T-34): solo con `NODE_ENV=development` y solo si `instituciones` está
+ * vacía, crea {@link INSTITUCION_POR_DEFECTO} para que el ADMIN pueda dar de alta pruebas en una base limpia.
+ * En `test` no actúa (cada suite siembra sus instituciones) y en producción tampoco: allí las altas siguen
+ * siendo controladas con `instituciones:crear` (DEC-03). Idempotente: reutiliza el upsert por nombre.
+ */
+export async function asegurarInstitucionPorDefecto(
+  db: mongo.Db,
+  nodeEnv: string,
+  now: Date = new Date(),
+): Promise<ResultadoInstitucionPorDefecto> {
+  if (nodeEnv !== 'development') return { accion: 'omitida', motivo: 'entorno' };
+  const existentes = await db.collection(INSTITUCIONES_COLLECTION).countDocuments({}, { limit: 1 });
+  if (existentes > 0) return { accion: 'omitida', motivo: 'catalogo-con-datos' };
+  const { id } = await crearInstitucion(db, INSTITUCION_POR_DEFECTO, now);
+  return { accion: 'creada', id };
+}
