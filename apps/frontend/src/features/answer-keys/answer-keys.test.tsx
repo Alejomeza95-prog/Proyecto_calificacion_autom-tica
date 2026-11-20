@@ -126,6 +126,54 @@ describe('listado de claves (CA-11, CA-12)', () => {
     await waitFor(() => expect(fake.count('GET /api/v1/claves-respuesta?materia=ING&estado=PUBLICADA&limite=100')).toBe(1));
   });
 
+  // T-35: CA-11 nombra también la fecha y la sesión entre los filtros del listado.
+  it('CA-11: filtra por fecha y sesión en la consulta, y se combinan con los demás filtros', async () => {
+    const empty = () => json(200, { items: [], total: 0 });
+    const fake = renderApp(APP_ROUTES.claves, 'DOCENTE', {
+      ...PRUEBAS,
+      [LIST]: empty,
+      'GET /api/v1/claves-respuesta?fecha=2026-11-11&limite=100': empty,
+      'GET /api/v1/claves-respuesta?fecha=2026-11-11&sesion=SESION_2&limite=100': empty,
+      'GET /api/v1/claves-respuesta?fecha=2026-11-11&sesion=SESION_2&materia=LC&limite=100': empty,
+    });
+    await screen.findByText('No hay claves con estos filtros.');
+
+    const sesion = screen.getByLabelText('Sesión');
+    expect(within(sesion).getAllByRole('option').map((o) => o.textContent)).toEqual(['Todas', 'Sesión 1', 'Sesión 2']);
+    expect(screen.getByLabelText('Fecha')).toHaveAttribute('type', 'date');
+
+    fireEvent.change(screen.getByLabelText('Fecha'), { target: { value: '2026-11-11' } });
+    await waitFor(() => expect(fake.count('GET /api/v1/claves-respuesta?fecha=2026-11-11&limite=100')).toBe(1));
+    fireEvent.change(sesion, { target: { value: 'SESION_2' } });
+    await waitFor(() => expect(fake.count('GET /api/v1/claves-respuesta?fecha=2026-11-11&sesion=SESION_2&limite=100')).toBe(1));
+    fireEvent.change(screen.getByLabelText('Materia'), { target: { value: 'LC' } });
+    await waitFor(() =>
+      expect(fake.count('GET /api/v1/claves-respuesta?fecha=2026-11-11&sesion=SESION_2&materia=LC&limite=100')).toBe(1),
+    );
+  });
+
+  it('CA-11: volver a «Todas» y borrar la fecha quitan esos filtros de la consulta', async () => {
+    const empty = () => json(200, { items: [], total: 0 });
+    const fake = renderApp(APP_ROUTES.claves, 'COORDINADOR', {
+      ...PRUEBAS,
+      [LIST]: empty,
+      'GET /api/v1/claves-respuesta?sesion=SESION_1&limite=100': empty,
+      'GET /api/v1/claves-respuesta?sesion=SESION_1&fecha=2026-11-12&limite=100': empty,
+      'GET /api/v1/claves-respuesta?fecha=2026-11-12&limite=100': empty,
+    });
+    await screen.findByText('No hay claves con estos filtros.');
+
+    fireEvent.change(screen.getByLabelText('Sesión'), { target: { value: 'SESION_1' } });
+    await waitFor(() => expect(fake.count('GET /api/v1/claves-respuesta?sesion=SESION_1&limite=100')).toBe(1));
+    fireEvent.change(screen.getByLabelText('Fecha'), { target: { value: '2026-11-12' } });
+    await waitFor(() => expect(fake.count('GET /api/v1/claves-respuesta?sesion=SESION_1&fecha=2026-11-12&limite=100')).toBe(1));
+
+    fireEvent.change(screen.getByLabelText('Sesión'), { target: { value: '' } });
+    await waitFor(() => expect(fake.count('GET /api/v1/claves-respuesta?fecha=2026-11-12&limite=100')).toBe(1));
+    fireEvent.change(screen.getByLabelText('Fecha'), { target: { value: '' } });
+    await waitFor(() => expect(fake.count(LIST)).toBe(2));
+  });
+
   it('CA-12: elimina un borrador tras confirmar, con la versión leída', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     const fake = renderApp(APP_ROUTES.claves, 'COORDINADOR', {

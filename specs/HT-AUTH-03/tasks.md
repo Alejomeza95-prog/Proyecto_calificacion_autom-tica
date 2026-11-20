@@ -3,7 +3,7 @@ id: HT-AUTH-03
 spec: ./spec.md
 plan: ./plan.md
 status: in-review        # draft | ready | in-progress | in-review | done
-updated: 2026-11-14
+updated: 2026-11-17
 ---
 
 # HT-AUTH-03 — Tasks
@@ -72,11 +72,13 @@ Reglas:
 | T-31 | Guardar los requisitos aportados en `docs/requisitos/historias/HT-AUTH-03.md` y actualizar `specs/roadmap.md` y `docs/catalogo-historias.md` | Soporte: trazabilidad exigida por `CLAUDE.md` regla 9 | §10 | Archivos presentes y enlazados | [x] | `docs/requisitos/historias/HT-AUTH-03.md`; `specs/roadmap.md`; `docs/catalogo-historias.md`; `docs/requisitos/README.md` |
 | T-33 | Corrección: el ADMIN no podía agregar una prueba desde «¿No está la prueba? Agrégala» (el editor enviaba `POST /pruebas` sin `institucionId`, obligatorio para el alcance global según plan §3.3, y el 400 se mostraba como error genérico). El editor muestra al ADMIN un selector «Institución de la prueba nueva», envía `institucionId`, selecciona la prueba creada e identifica su institución en el desplegable; errores de alta y genéricos con mensajes descriptivos | CA-06, RN-13 | §3.3, §8 | Vitest + Playwright con backend aislado | [x] | `AnswerKeyEditorPage.tsx`, `answer-keys-api.ts`, `navigation/use-load.ts`; `answer-keys.test.tsx` (3 casos nuevos: ADMIN, COORDINADOR, errores); `e2e/administracion-claves.spec.ts` «CA-06: el ADMIN agrega una prueba…»: pasa. Backend sin cambios: ya respondía 400 sin institución y 201 con ella (`administration.e2e-spec.ts`) |
 | T-34 | Institución por defecto: al arrancar en `development` con `instituciones` vacía se crea «Institución Educativa Demo» (`asegurarInstitucionPorDefecto` + `InstitucionPorDefectoLifecycle`); en el editor, con una sola institución se preselecciona y, sin ninguna, se explica por qué no se puede agregar la prueba | CA-06 | §3.2 | Integración MongoDB + Vitest | [x] | `instituciones/crear-institucion.ts`, `institucion-por-defecto.lifecycle.ts`, `app.module.ts`; `ht-auth-03-persistencia.int-spec.ts` (2 casos T-34); `answer-keys.test.tsx` (preselección y lista vacía); verificado en la base local: la API en desarrollo creó la institución al arrancar y una segunda ejecución la omitió |
+| T-35 | Corrección de CA-11 en el frontend: el listado de claves filtraba solo por prueba, materia y estado; se agregan los filtros **Fecha** (`type="date"`) y **Sesión** («Todas», «Sesión 1», «Sesión 2»), con etiqueta accesible y el mismo estilo que los demás. Se combinan con los otros filtros y, al vaciarlos, salen de la consulta. Backend sin cambios: `GET /claves-respuesta` ya aceptaba `fecha` y `sesion` (plan §8, §9.1) | CA-11, RN-13 | §2.1, §8 | Vitest | [x] | `answer-keys/AnswerKeysListPage.tsx`; `answer-keys.test.tsx` (2 casos nuevos: «CA-11: filtra por fecha y sesión…» y «CA-11: volver a «Todas» y borrar la fecha…»); frontend `pnpm lint` y `pnpm typecheck` limpios, Vitest 377/377 (18 archivos) el 2026-11-17; sin commit (pendiente de autorización del desarrollador) |
+| T-36 | Prueba de contrato de permisos, sin modificarlos: las copias del frontend (`navigation/permissions.ts`, `ROLES`, `ROLE_LABELS`, `APPROVABLE_ROLES`) coinciden con `apps/backend/src/authz/permissions.ts` y `authz/role.ts` (importados solo para lectura) y con la matriz de spec §8: panel de usuarios solo ADMIN (RN-01), aprobación solo de roles institucionales (RN-03), permisos de lectura, edición y revisión por rol (DEC-06) y ningún permiso sin rol | RN-05, CA-04, RN-01, RN-03 | §8, §9.3, §14 (DEC-06) | Vitest | [x] | `navigation/permissions.contract.test.ts` (nuevo, 8 casos); frontend `pnpm lint` y `pnpm typecheck` limpios, Vitest 377/377 (18 archivos) el 2026-11-17; sin commit (pendiente de autorización del desarrollador) |
 
 ## Fase 6 — Release
 | ID | Tarea | Cubre | Plan § | Verificación | Estado | Evidencia |
 |---|---|---|---|---|---|---|
-| T-32 | `/sdd-release` y Pull Request hacia `develop` | Todos | — | Checklist de release completo | [ ] | Checklist DoD verificado el 2026-11-14 tras T-33 (regresión completa): backend lint/typecheck/build OK, unit 255/255, integración 143 OK (1 omitida, Mailpit), E2E 157/157; frontend lint/typecheck/build OK, unit 365/365, E2E 234 OK (3 omitidas por diseño) en Chromium, Firefox y WebKit; `sdd-validate` sin fallas. Tras T-34: backend lint/typecheck/build OK, unit 255/255, integración 145 OK (1 omitida, Mailpit), E2E 157/157; frontend lint/typecheck OK, unit 367/367, E2E `administracion-claves` 3/3 en Chromium. Pendiente: abrir el PR (desarrollador) |
+| T-32 | `/sdd-release` y Pull Request hacia `develop` | Todos | — | Checklist de release completo | [ ] | Checklist DoD verificado el 2026-11-14 tras T-33 (regresión completa): backend lint/typecheck/build OK, unit 255/255, integración 143 OK (1 omitida, Mailpit), E2E 157/157; frontend lint/typecheck/build OK, unit 365/365, E2E 234 OK (3 omitidas por diseño) en Chromium, Firefox y WebKit; `sdd-validate` sin fallas. Tras T-34: backend lint/typecheck/build OK, unit 255/255, integración 145 OK (1 omitida, Mailpit), E2E 157/157; frontend lint/typecheck OK, unit 367/367, E2E `administracion-claves` 3/3 en Chromium. Tras T-35 y T-36 (2026-11-17, solo frontend): `pnpm lint` y `pnpm typecheck` limpios, Vitest 377/377 (18 archivos); backend sin cambios (sigue valiendo su evidencia del 2026-11-14); Playwright no se volvió a ejecutar. Pendiente: commits y abrir el PR (desarrollador) |
 
 ## Matriz de cobertura
 | Criterio / regla | Tareas | Pruebas | Cubierto |
@@ -84,14 +86,14 @@ Reglas:
 | CA-01 | T-05, T-08, T-17, T-23 | Supertest listado; Vitest panel | [x] |
 | CA-02 | T-01, T-09, T-17, T-18, T-23, T-27 | Supertest aprobar; E2E | [x] |
 | CA-03 | T-06, T-09, T-17, T-23 | Supertest 400/403/404/409 | [x] |
-| CA-04 | T-21, T-22 | Vitest; Playwright | [x] |
+| CA-04 | T-21, T-22, T-36 | Vitest; Playwright; contrato de permisos | [x] |
 | CA-05 | T-21, T-28 | Playwright + axe | [x] |
 | CA-06 | T-02, T-10, T-11, T-12, T-18, T-19, T-25, T-27, T-33, T-34 | Jest `resize`; Vitest grilla; E2E | [x] |
 | CA-07 | T-03, T-19, T-25 | Supertest 400; validador de esquema | [x] |
 | CA-08 | T-05, T-06, T-12, T-19, T-25 | Integración E11000 → 409 | [x] |
 | CA-09 | T-06, T-13, T-19, T-25, T-27 | Supertest versión vieja → 409 | [x] |
 | CA-10 | T-06, T-10, T-13, T-14, T-19, T-25, T-27 | Supertest 422/409 | [x] |
-| CA-11 | T-05, T-15, T-19, T-24, T-29 | Supertest alcance | [x] |
+| CA-11 | T-05, T-15, T-19, T-24, T-29, T-35 | Supertest alcance; Vitest filtros | [x] |
 | CA-12 | T-15, T-19, T-24 | Supertest 204/409 | [x] |
 | CA-13 | T-16, T-26 | Vitest casilla; Jest servicio; integración del esquema | [x] |
 | CA-14 | T-04, T-07, T-29 | Integración auditoría | [x] |
@@ -108,3 +110,4 @@ Reglas:
 | 2026-11-12 | `/sdd-release`: rama actualizada con `origin/develop` (`50ef43d`), checklist DoD completo y todas las pruebas en verde; estado in-progress → in-review. T-32 se marca al abrir el PR | Release |
 | 2026-11-14 | T-33: corrección del alta de pruebas por el ADMIN (faltaba `institucionId` en el frontend) y mensajes de error descriptivos; regresión completa en verde | Reporte del desarrollador (JhonDc) |
 | 2026-11-14 | T-34: institución por defecto en desarrollo y preselección en el editor de claves | Pedido de JhonDc |
+| 2026-11-17 | T-35: filtros de fecha y sesión en el listado de claves (CA-11). T-36: prueba de contrato de permisos frontend ↔ backend y spec §8, sin cambiar permisos. Matriz de CA-04 y CA-11 actualizada; evidencia agregada a T-32. Ninguna tarea anterior cambia | Revisión de completitud de HT-AUTH-03 y autorización de JhonDc (2026-11-17) |

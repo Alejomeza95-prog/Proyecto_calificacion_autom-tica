@@ -18,14 +18,19 @@ import {
   MATERIA_LABELS,
   MATERIAS,
   SESION_LABELS,
+  SESIONES,
   type ClaveFilters,
   type ClaveResumen,
   type EstadoClave,
   type Materia,
+  type Sesion,
 } from './answer-keys-api.ts';
 import { formatDay } from './format.ts';
 
-/** Listado de claves con filtros (HT-AUTH-03 CA-11) y eliminación de borradores (CA-12, RN-12). */
+/**
+ * Listado de claves con filtros por prueba, fecha, sesión, materia y estado (HT-AUTH-03 CA-11, T-35) y eliminación
+ * de borradores (CA-12, RN-12).
+ */
 export function AnswerKeysListPage() {
   const { session, request } = useSession();
   const rol = session.estado === 'autenticada' ? session.usuario.rol : null;
@@ -33,7 +38,7 @@ export function AnswerKeysListPage() {
   const [filters, setFilters] = useState<ClaveFilters>({});
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const messageRef = useResultFocus<HTMLDivElement>(message);
-  const ids = { prueba: useId(), materia: useId(), estado: useId() };
+  const ids = { prueba: useId(), fecha: useId(), sesion: useId(), materia: useId(), estado: useId() };
 
   const loadPruebas = useCallback(() => listPruebas(request), [request]);
   const pruebas = useLoad(loadPruebas).state;
@@ -99,6 +104,36 @@ export function AnswerKeysListPage() {
                       {p.nombre}
                     </option>
                   ))}
+              </select>
+            </div>
+            <div className={page.field}>
+              <label className={page.label} htmlFor={ids.fecha}>
+                Fecha
+              </label>
+              <input
+                id={ids.fecha}
+                type="date"
+                className={page.input}
+                value={filters.fecha ?? ''}
+                onChange={(e) => setFilter('fecha', e.target.value)}
+              />
+            </div>
+            <div className={page.field}>
+              <label className={page.label} htmlFor={ids.sesion}>
+                Sesión
+              </label>
+              <select
+                id={ids.sesion}
+                className={page.select}
+                value={filters.sesion ?? ''}
+                onChange={(e) => setFilter('sesion', e.target.value as Sesion | '')}
+              >
+                <option value="">Todas</option>
+                {SESIONES.map((s) => (
+                  <option key={s} value={s}>
+                    {SESION_LABELS[s]}
+                  </option>
+                ))}
               </select>
             </div>
             <div className={page.field}>

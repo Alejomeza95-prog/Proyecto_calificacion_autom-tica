@@ -6,7 +6,7 @@ IDs y temas tomados del roadmap original. Módulo derivado del prefijo del ID. L
 |---|---|---|---|---|
 | HT-CORE-01 | Transversal | Base técnica y servicios locales | in-progress (falta T-12 y el release) | [spec](HT-CORE-01/spec.md) |
 | HT-AUTH-01 | Transversal | Registro, verificación, acceso y recuperación de cuenta (RBAC) | draft (espera DT-04/05/07 y llevar la separación a `develop`) | [spec](HT-AUTH-01/spec.md) |
-| HT-AUTH-03 | Transversal | Aprobación de cuentas, menú lateral, claves de respuesta (Borrador/Publicada) y casilla «Verificada» | in-progress | [spec](HT-AUTH-03/spec.md) |
+| HT-AUTH-03 | Transversal | Aprobación de cuentas, menú lateral, claves de respuesta (Borrador/Publicada) y casilla «Verificada» | in-review | [spec](HT-AUTH-03/spec.md) |
 | HU-EVAL-001 | Evaluación | Asociación automática de respuestas | draft (pendiente de revisión) | [spec](HU-EVAL-001/spec.md) |
 | HU-EVAL-002 | Evaluación | Claves de respuesta versionadas | pending spec | — |
 | HU-EVAL-003 | Evaluación | Comparación automática con claves | pending spec | — |
