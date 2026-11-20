@@ -2,9 +2,11 @@ import { ApiError, isApiError, problemFromResponse } from './problem.ts';
 
 /** Ruta relativa: mismo origen (DEC-01). El proxy no reescribe rutas, para conservar el `Path` de la cookie. */
 const AUTH_BASE_PATH = '/api/v1/auth';
+/** Resto de la API (HT-AUTH-03): mismas reglas de origen, cabeceras y errores que `/auth`. */
+export const API_BASE_PATH = '/api/v1';
 
 export interface RequestOptions {
-  readonly method: 'GET' | 'POST';
+  readonly method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   readonly body?: object;
   readonly bearer?: string;
 }
@@ -23,9 +25,13 @@ function buildHeaders(options: RequestOptions): Record<string, string> {
   };
 }
 
-async function exchange(path: string, options: RequestOptions): Promise<{ response: Response; text: string }> {
+async function exchange(
+  path: string,
+  options: RequestOptions,
+  basePath: string,
+): Promise<{ response: Response; text: string }> {
   try {
-    const response = await fetch(`${AUTH_BASE_PATH}${path}`, {
+    const response = await fetch(`${basePath}${path}`, {
       method: options.method,
       credentials: 'same-origin',
       headers: buildHeaders(options),
@@ -39,8 +45,8 @@ async function exchange(path: string, options: RequestOptions): Promise<{ respon
 }
 
 /** Envía la solicitud. Devuelve el JSON de la respuesta, sin validar, o `undefined` si no hay cuerpo. */
-export async function send(path: string, options: RequestOptions): Promise<unknown> {
-  const { response, text } = await exchange(path, options);
+export async function send(path: string, options: RequestOptions, basePath: string = AUTH_BASE_PATH): Promise<unknown> {
+  const { response, text } = await exchange(path, options, basePath);
   if (!response.ok) throw await problemFromResponse(response);
   if (text === '') return undefined;
   try {
@@ -58,12 +64,23 @@ export async function sendProtected(
   path: string,
   options: Omit<RequestOptions, 'bearer'>,
   tokens: AccessTokenSource,
+  basePath: string = AUTH_BASE_PATH,
 ): Promise<unknown> {
   const bearer = tokens.current() ?? (await tokens.renew());
   try {
-    return await send(path, { ...options, bearer });
+    return await send(path, { ...options, bearer }, basePath);
   } catch (error) {
     if (!isApiError(error, 'no-autenticado')) throw error;
   }
-  return send(path, { ...options, bearer: await tokens.renew() });
+  return send(path, { ...options, bearer: await tokens.renew() }, basePath);
+}
+
+/** Cadena de consulta sin valores vacíos: `{ a: 1, b: undefined }` → `?a=1`. */
+export function queryString(params: Readonly<Record<string, string | number | undefined>>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') search.set(key, String(value));
+  }
+  const text = search.toString();
+  return text === '' ? '' : `?${text}`;
 }

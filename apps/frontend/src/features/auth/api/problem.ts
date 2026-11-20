@@ -17,6 +17,9 @@ const PROBLEM_KINDS = [
   'servicio-saturado',
   'verificacion-no-disponible',
   'error-interno',
+  // HT-AUTH-03: estado cambiado, duplicado o versión vieja; publicar una clave incompleta.
+  'conflicto',
+  'clave-incompleta',
 ] as const;
 
 export type ProblemKind = (typeof PROBLEM_KINDS)[number];
@@ -29,6 +32,7 @@ interface ApiErrorDetails {
   readonly title?: string;
   readonly fields?: readonly string[];
   readonly retryAfterSeconds?: number;
+  readonly missingQuestions?: readonly number[];
 }
 
 /**
@@ -42,15 +46,18 @@ export class ApiError extends Error {
   readonly title: string | null;
   readonly fields: readonly string[];
   readonly retryAfterSeconds: number | null;
+  /** `preguntasFaltantes` de `clave-incompleta` (HT-AUTH-03 CA-10). */
+  readonly missingQuestions: readonly number[];
 
   constructor(kind: ApiErrorKind, details: ApiErrorDetails = {}) {
-    super(`Solicitud de autenticación fallida: ${kind}`);
+    super(`Solicitud a la API fallida: ${kind}`);
     this.name = 'ApiError';
     this.kind = kind;
     this.status = details.status ?? null;
     this.title = details.title ?? null;
     this.fields = details.fields ?? [];
     this.retryAfterSeconds = details.retryAfterSeconds ?? null;
+    this.missingQuestions = details.missingQuestions ?? [];
   }
 }
 
@@ -82,6 +89,11 @@ function toFieldNames(errores: unknown): string[] {
   );
 }
 
+function toQuestionNumbers(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((n): n is number => Number.isSafeInteger(n) && (n as number) > 0);
+}
+
 async function readProblemBody(response: Response): Promise<unknown> {
   const contentType = response.headers.get('content-type') ?? '';
   if (!contentType.toLowerCase().includes(PROBLEM_CONTENT_TYPE)) return null;
@@ -106,5 +118,6 @@ export async function problemFromResponse(response: Response): Promise<ApiError>
     ...base,
     ...(typeof body.title === 'string' ? { title: body.title } : {}),
     fields: toFieldNames(body.errores),
+    missingQuestions: toQuestionNumbers(body.preguntasFaltantes),
   });
 }

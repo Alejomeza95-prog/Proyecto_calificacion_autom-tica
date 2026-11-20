@@ -86,6 +86,8 @@ export async function bootHttpApp(
     imports?: ModuleMetadata['imports'];
     /** Sustituye proveedores por valores de prueba (p. ej. un `InvitationResolver` sembrado). */
     overrides?: readonly { provide: unknown; useValue: unknown }[];
+    /** Migraciones a aplicar (por defecto solo `001-auth-indices`; HT-AUTH-03 agrega la 003). */
+    migrations?: readonly string[];
   } = {},
 ): Promise<HttpHarness> {
   const id = randomBytes(4).toString('hex');
@@ -129,7 +131,7 @@ export async function bootHttpApp(
   const connection = app.get<Connection>(getConnectionToken());
   const db = connection.db;
   if (!db) throw new Error('Conexión sin base de datos');
-  await new MigrationRunner({ db, nodeEnv: 'test', env: {} }, authMigrations().filter((m) => m.id === '001-auth-indices')).up();
+  await new MigrationRunner({ db, nodeEnv: 'test', env: {} }, authMigrations().filter((m) => (options.migrations ?? ['001-auth-indices']).includes(m.id))).up();
 
   const redis = app.get<Redis>(REDIS_CLIENT);
   const usuarios = app.get<Model<Usuario>>(getModelToken(Usuario.name));

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { LoginRequest } from '../api/types.ts';
-import type { SessionSnapshot } from './session-controller.ts';
+import type { ApiRequest, SessionSnapshot } from './session-controller.ts';
 
 /** Solo el estado de autenticación y los datos de `/me`; el token no entra en el árbol de React (RN-02). */
 export interface SessionContextValue {
@@ -8,6 +8,8 @@ export interface SessionContextValue {
   login(credentials: LoginRequest): Promise<void>;
   logout(): Promise<void>;
   retry(): void;
+  /** Solicitud autenticada a `/api/v1` (HT-AUTH-03). */
+  request: ApiRequest;
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null);

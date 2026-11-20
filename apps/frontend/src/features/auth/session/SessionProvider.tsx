@@ -23,7 +23,13 @@ export function SessionProvider({ children, controller = sessionController }: Se
   }, [controller, needsSession]);
 
   const value = useMemo<SessionContextValue>(
-    () => ({ session, login: controller.login, logout: controller.logout, retry: controller.retry }),
+    () => ({
+      session,
+      login: controller.login,
+      logout: controller.logout,
+      retry: controller.retry,
+      request: controller.request,
+    }),
     [controller, session],
   );
 

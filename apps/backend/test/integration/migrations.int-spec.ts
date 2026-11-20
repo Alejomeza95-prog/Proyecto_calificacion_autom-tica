@@ -33,7 +33,9 @@ async function snapshot(testDb: TestDb): Promise<string> {
 // T-38 (RN-03, RN-14), T-05 (RN-03, RN-10) y T-04 (CA-02, CA-13, RN-03, RN-06, RN-14).
 describe('migraciones (T-38, T-05, T-04)', () => {
   let testDb: TestDb;
-  const migrations = authMigrations();
+  // Esta suite prueba las migraciones de HT-AUTH-01 y el runner; las de HT-AUTH-03 (003, 004) tienen su
+  // propia suite (`ht-auth-03-persistencia.int-spec.ts`).
+  const migrations = authMigrations().filter((m) => ['001-auth-indices', '002-seed-roles-dev'].includes(m.id));
 
   beforeEach(async () => {
     testDb = await openTestDb('migr');

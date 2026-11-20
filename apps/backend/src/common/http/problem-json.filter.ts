@@ -10,13 +10,21 @@ import {
   TooManyAttemptsError,
 } from '../auth-errors';
 import type { HttpResponse } from './http-types';
-import { PROBLEM_CONTENT_TYPE, ProblemException, problemBody, ProblemType, type FieldError } from './problem';
+import {
+  PROBLEM_CONTENT_TYPE,
+  ProblemException,
+  problemBody,
+  ProblemType,
+  type FieldError,
+  type ProblemExtensions,
+} from './problem';
 
 interface Translated {
   readonly status: number;
   readonly type: ProblemType;
   readonly retryAfterS?: number;
   readonly errores?: readonly FieldError[];
+  readonly extensions?: ProblemExtensions;
 }
 
 /** Tipo de problema genérico por código HTTP (excepciones de Nest sin tipo explícito). */
@@ -30,6 +38,8 @@ function typeForStatus(status: number): ProblemType {
       return ProblemType.ACCESO_DENEGADO;
     case 404:
       return ProblemType.NO_ENCONTRADO;
+    case 409:
+      return ProblemType.CONFLICTO;
     case 429:
       return ProblemType.DEMASIADOS_INTENTOS;
     default:
@@ -54,7 +64,7 @@ export class ProblemJsonFilter implements ExceptionFilter {
     response.setHeader('Content-Type', PROBLEM_CONTENT_TYPE);
     response.setHeader('Cache-Control', 'no-store');
     setProblemType(response, t.type);
-    response.status(t.status).json(problemBody(t.status, t.type, t.errores));
+    response.status(t.status).json(problemBody(t.status, t.type, t.errores, t.extensions));
   }
 
   private translate(exception: unknown): Translated {
@@ -75,7 +85,12 @@ export class ProblemJsonFilter implements ExceptionFilter {
       };
     }
     if (exception instanceof ProblemException) {
-      return { status: exception.getStatus(), type: exception.problemType, errores: exception.errores };
+      return {
+        status: exception.getStatus(),
+        type: exception.problemType,
+        errores: exception.errores,
+        extensions: exception.extensions,
+      };
     }
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
